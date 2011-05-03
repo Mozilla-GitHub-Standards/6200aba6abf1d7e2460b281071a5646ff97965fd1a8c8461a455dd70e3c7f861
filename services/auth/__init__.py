@@ -244,7 +244,7 @@ def get_auth(config):
         pass
 
     try:
-        from services.auth.mozilla import MozillaSRegAuth
+        from services.auth.mozilla_sreg import MozillaSRegAuth
         ServicesAuth.register(MozillaSRegAuth)
     except ImportError:
         pass
