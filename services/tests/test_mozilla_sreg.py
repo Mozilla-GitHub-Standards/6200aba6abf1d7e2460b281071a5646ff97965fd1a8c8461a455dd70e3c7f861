@@ -63,8 +63,10 @@ def fake_response():
         r = Response('0')
     elif _CPT == 2:
         r = Response('0')
-    else:
+    elif _CPT == 3:
         r = Response('"foo"')
+    else:
+        r = Response('0')
 
     _CPT += 1
     return r
@@ -143,6 +145,10 @@ class TestMozillaSRegAuth(unittest.TestCase):
         auth.clear_reset_code(uid)
         wsgi_intercept.add_wsgi_intercept('localhost', 80, bad_reset_code_resp)
         self.assertFalse(auth.update_password(uid, 'newpass', key='foo'))
+
+        wsgi_intercept.add_wsgi_intercept('localhost', 80, fake_response)
+        self.assertFalse(auth.delete_user(uid))
+        self.assertTrue(auth.delete_user(uid, 'newpass'))
 
     def test_no_email_no_reset_code(self):
         if not DO_TESTS:

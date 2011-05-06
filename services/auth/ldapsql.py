@@ -146,7 +146,11 @@ class LDAPAuth(ResetCodeManager):
         #if user_id:
         #    return "uidNumber=%i,%s" % (user_id, dn)
         scope = ldap.SCOPE_SUBTREE
-        filter = '(uid=%s)' % user_name
+        #until we get everyone switched, we'll need to look up both
+        if user_id:
+            filter = '(uidNumber=%s)' % user_id
+        else:
+            filter = '(uid=%s)' % user_name
 
         with self._conn() as conn:
             try:
@@ -349,8 +353,7 @@ class LDAPAuth(ResetCodeManager):
         Returns:
             True if the change was successful, False otherwise
         """
-        user_name = self._get_username(user_id)
-        user_dn = self._get_dn(user_name)
+        user_dn = self._get_dn(user_id)
 
         if old_password is None:
             if key:
@@ -395,13 +398,10 @@ class LDAPAuth(ResetCodeManager):
         Returns:
             True if the deletion was successful, False otherwise
         """
-        user_name = self._get_username(user_id)
-        dn = self._get_dn(user_name)
-        if password is None:
-            return False   # we need a password
+        dn = self._get_dn(user_id=user_id)
 
         try:
-            with self._conn(dn, password) as conn:
+            with self._conn(self.admin_user, self.admin_password) as conn:
                 try:
                     res, __ = conn.delete_s(dn)
                 except ldap.NO_SUCH_OBJECT:

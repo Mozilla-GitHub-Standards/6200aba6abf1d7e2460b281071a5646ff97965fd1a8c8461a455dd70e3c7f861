@@ -161,6 +161,28 @@ class MozillaAuth(LDAPAuth):
 
         return body == 0
 
+    def delete_user(self, user_id, password=None):
+        """Deletes the user
+
+        Args:
+            user_id: user id
+            password: user password
+
+        Returns:
+            True if the change was successful, False otherwise
+        """
+        if password is None:
+            return False
+
+        payload = {'password': password}
+        username = self._get_username(user_id)
+        url = self.generate_url(username)
+        status, body = self._proxy('DELETE', url, payload)
+        if status != 200:
+            raise BackendError()
+
+        return body == 0
+
     def get_user_node(self, user_id, assign=True):
         if self.single_box:
             return None

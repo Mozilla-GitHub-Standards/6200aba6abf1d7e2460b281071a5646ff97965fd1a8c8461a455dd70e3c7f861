@@ -274,6 +274,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
         auth = self._get_auth(users_base_dn='ou=users,dc=mozilla')
         wanted = 'uidNumber=1,ou=users,dc=mozilla'
         self.assertEquals(auth._get_dn('testuser'), wanted)
+        self.assertEquals(auth._get_dn(user_id=1), wanted)
 
         auth.create_user('tarek', 'tarek', 'tarek@ziade.org')
         uid = auth.get_user_id('tarek')
