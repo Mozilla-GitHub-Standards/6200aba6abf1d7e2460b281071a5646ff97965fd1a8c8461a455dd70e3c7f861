@@ -434,6 +434,8 @@ class LDAPAuth(ResetCodeManager):
 
         res = res[0][1]
 
+        # this makes the assumption that weave: is the only
+        # product. see https://bugzilla.mozilla.org/show_bug.cgi?id=655147
         for node in res['primaryNode']:
             node = node[len('weave:'):]
             if node == '':
