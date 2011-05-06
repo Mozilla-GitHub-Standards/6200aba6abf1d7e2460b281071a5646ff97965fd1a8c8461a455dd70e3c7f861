@@ -143,8 +143,8 @@ class LDAPAuth(ResetCodeManager):
         dn = self.users_root
 
         #if we already have the uid, just build it
-        if user_id:
-            return "uidNumber=%i,%s" % (user_id, dn)
+        #if user_id:
+        #    return "uidNumber=%i,%s" % (user_id, dn)
         scope = ldap.SCOPE_SUBTREE
         filter = '(uid=%s)' % user_name
 
@@ -168,8 +168,6 @@ class LDAPAuth(ResetCodeManager):
     def _get_username(self, user_id):
         """Returns the name for a user id"""
         dn = self.users_root
-        if dn == 'md5':
-            dn = self.users_base_dn
         scope = ldap.SCOPE_SUBTREE
         filter = '(uidNumber=%s)' % user_id
 
@@ -193,8 +191,6 @@ class LDAPAuth(ResetCodeManager):
     def get_user_id(self, user_name):
         """Returns the id for a user name"""
         dn = self.users_root
-        if dn == 'md5':
-            dn = self.users_base_dn
         scope = ldap.SCOPE_SUBTREE
         filter = '(uid=%s)' % user_name
 
@@ -240,7 +236,7 @@ class LDAPAuth(ResetCodeManager):
                 'objectClass': ['dataStore', 'inetOrgPerson']}
 
         user = user.items()
-        dn = "uidNumber=%i,%s" % (user_id, self.users_root)
+        dn = "uidNumber=%i,%s" % (user_id, self.users_base_dn)
 
         with self._conn(self.admin_user, self.admin_password) as conn:
             try:
