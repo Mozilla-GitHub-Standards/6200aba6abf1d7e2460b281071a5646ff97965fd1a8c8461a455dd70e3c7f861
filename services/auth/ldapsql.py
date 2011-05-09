@@ -139,19 +139,9 @@ class LDAPAuth(ResetCodeManager):
         """Returns the name of the authentication backend"""
         return 'ldap'
 
-    def _get_dn(self, user_name=None, user_id=None):
+    def _get_dn_by_filter(self, filter):
         dn = self.users_root
-
-        #if we already have the uid, just build it
-        #if user_id:
-        #    return "uidNumber=%i,%s" % (user_id, dn)
         scope = ldap.SCOPE_SUBTREE
-        #until we get everyone switched, we'll need to look up both
-        if user_id:
-            filter = '(uidNumber=%s)' % user_id
-        else:
-            filter = '(uid=%s)' % user_name
-
         with self._conn() as conn:
             try:
                 user = conn.search_st(dn, scope, filterstr=filter,
@@ -166,8 +156,13 @@ class LDAPAuth(ResetCodeManager):
         if user is None or len(user) == 0:
             return None
 
-        #dn is actually the first element that comes back. Don't need attr
         return user[0][0]
+
+    def _userid2dn(self, user_id):
+        return self._get_dn_by_filter('(uidNumber=%s)' % user_id)
+
+    def _username2dn(self, user_name):
+        return self._get_dn_by_filter('(uid=%s)' % user_name)
 
     def _get_username(self, user_id):
         """Returns the name for a user id"""
@@ -255,7 +250,11 @@ class LDAPAuth(ResetCodeManager):
         """Authenticates a user given a user_name and password.
 
         Returns the user id in case of success. Returns None otherwise."""
-        dn = self._get_dn(user_name)
+        dn = self._username2dn(user_name)
+        if dn is None:
+            # unknown user, we can return immediatly
+            return None
+
         attrs = ['uidNumber']
         if self.check_account_state:
             attrs.append('account-enabled')
@@ -290,7 +289,7 @@ class LDAPAuth(ResetCodeManager):
             tuple: username, email
         """
         user_name = self._get_username(user_id)
-        dn = self._get_dn(user_name)
+        dn = self._username2dn(user_name)
         scope = ldap.SCOPE_BASE
 
         with self._conn() as conn:
@@ -323,12 +322,12 @@ class LDAPAuth(ResetCodeManager):
             return False   # we need a password
 
         user = [(ldap.MOD_REPLACE, 'mail', [email])]
-        #not going to change this behavior yet
+        # not going to change this behavior yet
         #user = [(ldap.MOD_REPLACE, 'mail', [email]),
         #        (ldap.MOD_REPLACE, 'uid', [extract_username(email)])
         #       ]
         user_name = self._get_username(user_id)
-        dn = self._get_dn(user_name)
+        dn = self._username2dn(user_name)
 
         with self._conn(dn, password) as conn:
             try:
@@ -339,8 +338,7 @@ class LDAPAuth(ResetCodeManager):
 
         return res == ldap.RES_MODIFY
 
-    def update_password(self, user_id, new_password,
-                        old_password=None, key=None):
+    def update_password(self, user_id, new_password, old_password):
         """Change the user password.
 
         Uses the admin bind or the user bind if the old password is provided.
@@ -353,30 +351,55 @@ class LDAPAuth(ResetCodeManager):
         Returns:
             True if the change was successful, False otherwise
         """
-        user_dn = self._get_dn(user_id)
-
-        if old_password is None:
-            if key:
-                #using a key, therefore we should check it
-                if self.verify_reset_code(user_id, key):
-                    self.clear_reset_code(user_id)
-                else:
-                    logger.error("bad key used for update password")
-                    return False
-            # we will use admin auth
-            dn = self.admin_user
-            ldap_password = self.admin_password
-        else:
-            # user auth
-            dn = user_dn
-            ldap_password = old_password
-            # we need a password
+        user_dn = self._userid2dn(user_id)
+        if user_dn is None:
+            raise BackendError('Unknown user "%s"' % user_id)
 
         password_hash = ssha(new_password)
         user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
 
         try:
-            with self._conn(dn, ldap_password) as conn:
+            with self._conn(user_dn, old_password) as conn:
+                try:
+                    res, __ = conn.modify_s(user_dn, user)
+                except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
+                    logger.debug('Could not update the password in ldap.')
+                    raise BackendError(str(e))
+        except ldap.INVALID_CREDENTIALS:
+            return False
+
+        self._purge_conn(user_dn, new_password)
+        return res == ldap.RES_MODIFY
+
+    def admin_update_password(self, user_id, new_password, key):
+        """Change the user password.
+
+        Uses the admin bind or the user bind if the old password is provided.
+
+        Args:
+            user_id: user id
+            new_password: new password
+            key: password reset key
+
+        Returns:
+            True if the change was successful, False otherwise
+        """
+        user_dn = self._userid2dn(user_id)
+        if user_dn is None:
+            raise BackendError('Unknown user "%s"' % user_id)
+
+        # using a key, therefore we should check it
+        if self.verify_reset_code(user_id, key):
+            self.clear_reset_code(user_id)
+        else:
+            logger.error("bad key used for update password")
+            return False
+
+        password_hash = ssha(new_password)
+        user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
+
+        try:
+            with self._conn(self.admin_user, self.admin_password) as conn:
                 try:
                     res, __ = conn.modify_s(user_dn, user)
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
@@ -398,7 +421,7 @@ class LDAPAuth(ResetCodeManager):
         Returns:
             True if the deletion was successful, False otherwise
         """
-        dn = self._get_dn(user_id=user_id)
+        dn = self._userid2dn(user_id)
 
         try:
             with self._conn(self.admin_user, self.admin_password) as conn:
@@ -420,7 +443,7 @@ class LDAPAuth(ResetCodeManager):
             return None
 
         user_name = self._get_username(user_id)
-        dn = self._get_dn(user_name)
+        dn = self._username2dn(user_name)
 
         # getting the list of primary nodes
         with self._conn() as conn:

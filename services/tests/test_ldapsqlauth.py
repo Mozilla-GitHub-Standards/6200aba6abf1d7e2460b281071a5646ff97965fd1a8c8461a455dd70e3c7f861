@@ -226,7 +226,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
         self.assertEquals(name, 'tarek')
 
         # update password
-        auth.update_password(uid, 'xxxx')
+        auth.update_password(uid, 'xxxx', 'tarek')
         #auth_uid = auth.authenticate_user('tarek', 'tarek')
         #self.assertEquals(auth_uid, None)
         #auth_uid = auth.authenticate_user('tarek', 'xxxx')
@@ -273,8 +273,8 @@ class TestLDAPSQLAuth(unittest.TestCase):
 
         auth = self._get_auth(users_base_dn='ou=users,dc=mozilla')
         wanted = 'uidNumber=1,ou=users,dc=mozilla'
-        self.assertEquals(auth._get_dn('testuser'), wanted)
-        self.assertEquals(auth._get_dn(user_id=1), wanted)
+        self.assertEquals(auth._username2dn('testuser'), wanted)
+        self.assertEquals(auth._userid2dn(1), wanted)
 
         auth.create_user('tarek', 'tarek', 'tarek@ziade.org')
         uid = auth.get_user_id('tarek')
@@ -331,11 +331,11 @@ class TestLDAPSQLAuth(unittest.TestCase):
         self.assertEqual(auth.conn.size, 5)
 
     def test_update_password(self):
-        # when update_password is called without old password
+        # when admin_update_password is called with a key
         # the admin auth should be used.
         #
-        # When called with the user password, the bind
-        # should be the user
+        # When update_password is called with the user password,
+        # the bind should be the user
         if not LDAP:
             return
 
@@ -347,19 +347,22 @@ class TestLDAPSQLAuth(unittest.TestCase):
             calls.append((bind, passwd))
             return auth._conn2(bind, passwd)
 
+        old = auth.verify_reset_code
+        auth.verify_reset_code = lambda userid, key: True
         auth._conn = conn
         try:
             self._create_user(auth, 'tarek4', 'tarek4', 'tarek@ziade.org')
             uid = auth.authenticate_user('tarek4', 'tarek4')
-            self.assertTrue(auth.update_password(uid, 'password'))
+            self.assertTrue(auth.admin_update_password(uid, 'password', 'key'))
             self.assertEqual(calls[-1], ('uid=adminuser,ou=users,dc=mozilla',
                                          'admin'))
-            self.assertTrue(auth.update_password(uid, 'password2',
-                                                 old_password='password'))
+
+            self.assertTrue(auth.update_password(uid, 'password2', 'password'))
             self.assertEqual(calls[-1],
-                             ('uidNumber=%s,ou=users,dc=mozilla' %uid, 'password'))
+                       ('uidNumber=%s,ou=users,dc=mozilla' % uid, 'password'))
         finally:
             auth._conn = auth._conn2
+            auth.verify_reset_code = old
 
     def test_pool_purged(self):
         if not LDAP:

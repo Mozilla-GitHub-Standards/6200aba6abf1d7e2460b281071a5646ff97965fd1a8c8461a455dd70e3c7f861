@@ -272,6 +272,6 @@ def set_app(urls, controllers, klass=SyncServerApp, auth_class=Authentication,
             app = CatchErrorMiddleware(app, logger_name='syncserver')
 
         if wrapper is not None:
-            app = wrapper(app, config = params)
+            app = wrapper(app, config=params)
         return app
     return make_app

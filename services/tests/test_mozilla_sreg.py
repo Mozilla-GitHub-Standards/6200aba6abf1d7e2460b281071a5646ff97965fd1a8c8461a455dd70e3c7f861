@@ -131,9 +131,9 @@ class TestMozillaSRegAuth(unittest.TestCase):
         auth_uid = auth.authenticate_user('tarek', 'tarek')
         self.assertEquals(auth_uid, uid)
 
-        # password change with no old password (sreg)
+        # password change with the key (sreg)
         self.assertTrue(auth.generate_reset_code(uid))
-        self.assertTrue(auth.update_password(uid, 'newpass', key='foo'))
+        self.assertTrue(auth.admin_update_password(uid, 'newpass', key='foo'))
 
         # password change with old password (ldap)
         self.assertTrue(auth.update_password(uid, 'newpass', 'tarek'))
@@ -144,7 +144,7 @@ class TestMozillaSRegAuth(unittest.TestCase):
 
         auth.clear_reset_code(uid)
         wsgi_intercept.add_wsgi_intercept('localhost', 80, bad_reset_code_resp)
-        self.assertFalse(auth.update_password(uid, 'newpass', key='foo'))
+        self.assertFalse(auth.admin_update_password(uid, 'newpass', key='foo'))
 
         wsgi_intercept.add_wsgi_intercept('localhost', 80, fake_response)
         self.assertFalse(auth.delete_user(uid))
@@ -163,7 +163,7 @@ class TestMozillaSRegAuth(unittest.TestCase):
                            connector_cls=MemoryStateConnector)
 
         self.assertRaises(NoEmailError, auth.generate_reset_code, 'xxx')
-        self.assertRaises(InvalidCodeError,  auth.update_password, 'xxx',
+        self.assertRaises(InvalidCodeError,  auth.admin_update_password, 'xxx',
                           'xxx', key='xxx')
 
 

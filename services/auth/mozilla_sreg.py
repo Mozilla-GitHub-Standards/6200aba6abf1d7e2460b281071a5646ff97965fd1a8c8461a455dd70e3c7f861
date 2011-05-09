@@ -200,8 +200,7 @@ class MozillaAuth(LDAPAuth):
 
         return body
 
-    def update_password(self, user_id, new_password,
-                        old_password=None, key=None):
+    def admin_update_password(self, user_id, new_password, key):
         """Change the user password.
 
         Uses the admin bind or the user bind if the old password is provided.
@@ -209,21 +208,11 @@ class MozillaAuth(LDAPAuth):
         Args:
             user_id: user id
             password: new password
-            old_password: old password of the user (optional)
             key: the reset code
 
         Returns:
             True if the change was successful, False otherwise
         """
-        if old_password is not None:
-            return super(MozillaAuth, self).update_password(user_id,
-                                              new_password,
-                                              old_password=old_password)
-
-        if not key:
-            logger.error("Calling update password without password or key")
-            return False
-
         payload = {'reset_code': key, 'password': new_password}
         username = self._get_username(user_id)
         url = self.generate_url(username, 'password')

@@ -83,7 +83,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
 
         #password change with no old password (sreg)
         self.assertTrue(auth.generate_reset_code(uid))
-        self.assertTrue(auth.update_password(uid, 'newpass', key='foo'))
+        self.assertTrue(auth.admin_update_password(uid, 'newpass', key='foo'))
 
         #password change with old password (ldap)
         self.assertTrue(auth.update_password(uid, 'newpass', 'tarek'))
@@ -94,7 +94,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
 
         auth.clear_reset_code(uid)
         wsgi_intercept.add_wsgi_intercept('localhost', 80, bad_reset_code_resp)
-        self.assertFalse(auth.update_password(uid, 'newpass', key='foo'))
+        self.assertFalse(auth.admin_update_password(uid, 'newpass', key='foo'))
 
 
 def test_suite():
