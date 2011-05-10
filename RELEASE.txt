@@ -1,3 +1,23 @@
+1.2 - 2011-05-10
+================
+
+Impacts:
+
+- Ops
+- Infrasec
+- QA
+
+Dependencies:
+
+- None
+
+Relevant changes:
+
+- Bug 655281 - add an admin_update_password
+
+
+
+
 1.0-4 - 2011-04-28
 ==================
 
