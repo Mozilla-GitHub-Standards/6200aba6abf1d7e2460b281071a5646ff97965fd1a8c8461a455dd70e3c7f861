@@ -4,9 +4,9 @@ Sync Core
 
 Core library that provides these features:
 
-- CEF logger
 - Config reader/writer
 - Plugin system
 - Base WSGI application for Sync servers
 - Error codes for Sync
 - Authentication back ends for Sync
+- Event registry

@@ -52,6 +52,7 @@ from services.util import (convert_config, CatchErrorMiddleware, round_time,
 from services import logger
 from services.wsgiauth import Authentication
 from services.controllers import StandardController
+from services.events import REQUEST_STARTS, REQUEST_ENDS, notify
 
 
 class SyncServerApp(object):
@@ -149,10 +150,23 @@ class SyncServerApp(object):
     def _heartbeat(self, request):
         return self.standard_controller._heartbeat(request)
 
+    # events fired when a request is handled
+    def _notified(func):
+        def __notified(self, request):
+            notify(REQUEST_STARTS, request)
+            response = None
+            try:
+                response = func(self, request)
+                return response
+            finally:
+                notify(REQUEST_ENDS, response)
+        return __notified
+
     #
     # entry point
     #
     @wsgify
+    @_notified
     def __call__(self, request):
         if request.method in ('HEAD',):
             raise HTTPBadRequest('"%s" not supported' % request.method)

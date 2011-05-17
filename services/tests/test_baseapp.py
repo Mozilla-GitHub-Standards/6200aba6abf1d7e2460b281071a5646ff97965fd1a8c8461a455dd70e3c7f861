@@ -38,6 +38,8 @@ import base64
 
 from services.baseapp import SyncServerApp
 from services.util import BackendError
+from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
+                             unsubscribe)
 from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable
 
 
@@ -161,11 +163,39 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertTrue("DEEBOOG" in res.body)
 
+    def test_events(self):
+
+        pings = []
+
+        def starts(request):
+            pings.append('starts')
+
+        def ends(response):
+            pings.append('ends')
+
+        subscribe(REQUEST_STARTS, starts)
+        subscribe(REQUEST_ENDS, ends)
+        try:
+            config = {'global.heartbeat_page': '__heartbeat__',
+                    'global.debug_page': '__debug__',
+                    'auth.backend': 'dummy'}
+            urls = []
+            controllers = {}
+            app = SyncServerApp(urls, controllers, config)
+            request = _Request('GET', '/__heartbeat__', 'localhost')
+            app(request)
+        finally:
+            unsubscribe(REQUEST_STARTS, starts)
+            unsubscribe(REQUEST_ENDS, ends)
+
+        self.assertEquals(pings, ['starts', 'ends'])
+
 
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestBaseApp))
     return suite
+
 
 if __name__ == "__main__":
     unittest.main(defaultTest="test_suite")
