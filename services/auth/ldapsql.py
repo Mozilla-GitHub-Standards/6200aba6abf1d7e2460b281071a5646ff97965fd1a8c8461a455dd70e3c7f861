@@ -218,6 +218,7 @@ class LDAPAuth(ResetCodeManager):
     def create_user(self, user_name, password, email):
         """Creates a user. Returns True on success."""
         user_name = str(user_name)   # XXX only ASCII
+        password = password.encode('utf-8')
         user_id = self._get_next_user_id()
         password_hash = ssha(password)
         key = '%s%s' % (random.randint(0, 9999999), user_name)
@@ -246,11 +247,12 @@ class LDAPAuth(ResetCodeManager):
 
         return res == ldap.RES_ADD
 
-    def authenticate_user(self, user_name, passwd):
+    def authenticate_user(self, user_name, password):
         """Authenticates a user given a user_name and password.
 
         Returns the user id in case of success. Returns None otherwise."""
         dn = self._username2dn(user_name)
+        password = password.encode('utf-8')
         if dn is None:
             # unknown user, we can return immediatly
             return None
@@ -260,7 +262,7 @@ class LDAPAuth(ResetCodeManager):
             attrs.append('account-enabled')
 
         try:
-            with self._conn(dn, passwd) as conn:
+            with self._conn(dn, password) as conn:
                 user = conn.search_st(dn, ldap.SCOPE_BASE,
                                       attrlist=attrs,
                                       timeout=self.ldap_timeout)
@@ -321,6 +323,7 @@ class LDAPAuth(ResetCodeManager):
         if password is None:
             return False   # we need a password
 
+        password = password.encode('utf-8')
         user = [(ldap.MOD_REPLACE, 'mail', [email])]
         # not going to change this behavior yet
         #user = [(ldap.MOD_REPLACE, 'mail', [email]),
@@ -354,6 +357,9 @@ class LDAPAuth(ResetCodeManager):
         user_dn = self._userid2dn(user_id)
         if user_dn is None:
             raise BackendError('Unknown user "%s"' % user_id)
+
+        old_password = old_password.encode('utf-8')
+        new_password = new_password.encode('utf-8')
 
         password_hash = ssha(new_password)
         user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
@@ -395,6 +401,7 @@ class LDAPAuth(ResetCodeManager):
             logger.error("bad key used for update password")
             return False
 
+        new_password = new_password.encode('utf-8')
         password_hash = ssha(new_password)
         user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
 

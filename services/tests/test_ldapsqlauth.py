@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -205,10 +206,10 @@ class TestLDAPSQLAuth(unittest.TestCase):
 
         auth = self._get_auth()
         if auth.get_user_id('tarek') is None:
-            auth.create_user('tarek', 'tarek', 'tarek@ziade.org')
+            auth.create_user('tarek', u'tareké', 'tarek@ziade.org')
         uid = auth.get_user_id('tarek')
 
-        auth_uid = auth.authenticate_user('tarek', 'tarek')
+        auth_uid = auth.authenticate_user('tarek', u'tareké')
         self.assertEquals(auth_uid, uid)
 
         # reset code APIs
@@ -226,13 +227,13 @@ class TestLDAPSQLAuth(unittest.TestCase):
         self.assertEquals(name, 'tarek')
 
         # update password
-        auth.update_password(uid, 'xxxx', 'tarek')
+        auth.update_password(uid, u'xxxxé', 'tarek')
         #auth_uid = auth.authenticate_user('tarek', 'tarek')
         #self.assertEquals(auth_uid, None)
         #auth_uid = auth.authenticate_user('tarek', 'xxxx')
         #self.assertEquals(auth_uid, ui)
-        auth.delete_user(uid, 'xxxx')
-        auth_uid = auth.authenticate_user('tarek', 'xxxx')
+        auth.delete_user(uid, u'xxxxé')
+        auth_uid = auth.authenticate_user('tarek', u'xxxxé')
         self.assertEquals(auth_uid, None)
 
     def test_node_attribution(self):

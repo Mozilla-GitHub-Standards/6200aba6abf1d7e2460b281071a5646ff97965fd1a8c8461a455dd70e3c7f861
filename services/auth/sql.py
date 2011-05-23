@@ -123,7 +123,7 @@ class SQLAuth(ResetCodeManager):
 
     def create_user(self, user_name, password, email):
         """Creates a user. Returns True on success."""
-        password_hash = ssha256(password)
+        password_hash = ssha256(password.encode('utf8'))
         query = insert(users).values(username=user_name, email=email,
                                      password_hash=password_hash, status=1)
         res = safe_execute(self._engine, query)
