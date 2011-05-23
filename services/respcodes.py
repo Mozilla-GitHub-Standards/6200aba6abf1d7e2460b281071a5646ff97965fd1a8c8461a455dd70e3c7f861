@@ -36,17 +36,18 @@
 """ 400 error codes
     See: https://wiki.mozilla.org/Labs/Weave/1.0/ResponseCodes
 """
-WEAVE_ILLEGAL_METH = 1          # Illegal method/protocol
-WEAVE_INVALID_CAPTCHA = 2       # Incorrect/missing captcha
-WEAVE_INVALID_USER = 3          # Invalid/missing username
-WEAVE_INVALID_WRITE = 4         # Attempt to overwrite data that can't be
-WEAVE_WRONG_USERID = 5          # Userid does not match account in path
-WEAVE_MALFORMED_JSON = 6        # Json parse failure
-WEAVE_MISSING_PASSWORD = 7      # Missing password field
-WEAVE_INVALID_WBO = 8           # Invalid Weave Basic Object
-WEAVE_WEAK_PASSWORD = 9         # Requested password not strong enough
-WEAVE_INVALID_RESET_CODE = 10   # Invalid/missing password reset code
-WEAVE_UNSUPPORTED_FUNC = 11     # Unsupported function
-WEAVE_NO_EMAIL_ADRESS = 12      # No email address on file
-WEAVE_INVALID_COLLECTION = 13   # Invalid collection
-WEAVE_OVER_QUOTA = 14           # User over quota
+WEAVE_ILLEGAL_METH = 1              # Illegal method/protocol
+WEAVE_INVALID_CAPTCHA = 2           # Incorrect/missing captcha
+WEAVE_INVALID_USER = 3              # Invalid/missing username
+WEAVE_INVALID_WRITE = 4             # Attempt to overwrite data that can't be
+WEAVE_WRONG_USERID = 5              # Userid does not match account in path
+WEAVE_MALFORMED_JSON = 6            # Json parse failure
+WEAVE_MISSING_PASSWORD = 7          # Missing password field
+WEAVE_INVALID_WBO = 8               # Invalid Weave Basic Object
+WEAVE_WEAK_PASSWORD = 9             # Requested password not strong enough
+WEAVE_INVALID_RESET_CODE = 10       # Invalid/missing password reset code
+WEAVE_UNSUPPORTED_FUNC = 11         # Unsupported function
+WEAVE_NO_EMAIL_ADRESS = 12          # No email address on file
+WEAVE_INVALID_COLLECTION = 13       # Invalid collection
+WEAVE_OVER_QUOTA = 14               # User over quota
+WEAVE_USERNAME_EMAIL_MISMATCH = 15  # The e-mail does not match the username
