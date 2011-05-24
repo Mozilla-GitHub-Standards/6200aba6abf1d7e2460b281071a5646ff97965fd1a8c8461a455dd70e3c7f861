@@ -316,12 +316,13 @@ class LDAPAuth(ResetCodeManager):
         Args:
             user_id: user id
             email: new email
+            password: user's password
 
         Returns:
             True if the change was successful, False otherwise
         """
         if password is None:
-            return False   # we need a password
+            raise NotImplementedError('Password required.')
 
         password = password.encode('utf-8')
         user = [(ldap.MOD_REPLACE, 'mail', [email])]

@@ -477,3 +477,11 @@ class TestLDAPSQLAuth(unittest.TestCase):
         auth = self._get_auth(create_tables=True)
         res = auth._engine.execute('select * from available_nodes').fetchall()
         self.assertEquals(res, [])
+
+    def test_not_implemented(self):
+        if not LDAP:
+            return
+        auth = LDAPAuth('ldap://localhost', 'sqlite:///:memory:')
+
+        self.assertRaises(NotImplementedError, auth.update_email, 'tarek',
+                          'email')
