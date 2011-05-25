@@ -39,6 +39,13 @@ import abc
 from services.pluginreg import PluginRegistry
 
 
+class User(dict):
+    """
+    A holding class for user data. One day it might be more, so better
+    to put a class wrapper around it
+    """
+    pass
+
 class NodeAttributionError(Exception):
     """Raised when the node attribution fails."""
     pass
