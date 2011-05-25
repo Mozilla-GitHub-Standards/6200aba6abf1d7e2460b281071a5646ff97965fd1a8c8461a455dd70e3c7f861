@@ -46,6 +46,7 @@ class User(dict):
     """
     pass
 
+
 class NodeAttributionError(Exception):
     """Raised when the node attribution fails."""
     pass
