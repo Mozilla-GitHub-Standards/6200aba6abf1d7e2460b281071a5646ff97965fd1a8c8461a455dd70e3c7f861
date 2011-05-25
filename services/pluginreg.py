@@ -14,11 +14,12 @@
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
-# Portions created by the Initial Developer are Copyright (C) 2010
+# Portions created by the Initial Developer are Copyright (C) 2011
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Toby Elliott (telliott@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -67,6 +68,42 @@ def _resolve_name(name):
         raise ImportError(name)
 
     return ret
+
+
+def load_and_configure(config, section=None, cls_param='backend'):
+    """given a config file, extracts the class name, imports the class and
+    returns an instance configured with the rest of the config file
+
+    Args:
+        config: a configuration object
+        section: the section of the config object to use in configuring.
+            If the config file has already been filtered, do not pass this in.
+        cls_param: the name of the parameter in that section of the config
+            that defines the class to be used
+
+    Returns:
+        An instanciated object of the requested class if the change was
+        successful, False otherwise
+    """
+    params = config
+    if section:
+        params = filter_params(section, params)
+
+    backend_name = params[cls_param]
+    backend = None
+    try:
+        backend = _resolve_name(backend_name)
+    except ImportError:
+        msg = ('Unknown fully qualified name for the backend:'
+               ' %r') % backend_name
+        raise KeyError(msg)
+    if backend is None:
+        raise KeyError('No plugin registered for "%s"' % backend_name)
+
+    del params['backend']
+
+    # now returning an instance
+    return backend(**params)
 
 
 class PluginRegistry(object):

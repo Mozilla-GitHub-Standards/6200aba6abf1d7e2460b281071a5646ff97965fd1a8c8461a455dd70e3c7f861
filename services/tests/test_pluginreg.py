@@ -34,7 +34,12 @@
 #
 # ***** END LICENSE BLOCK *****
 import unittest
-from services.pluginreg import PluginRegistry
+from services.pluginreg import PluginRegistry, load_and_configure
+
+
+class Dummy(object):
+    def __init__(self, foo=None, **kw):
+        self.foo = foo
 
 
 class TestPlugin(unittest.TestCase):
@@ -63,6 +68,16 @@ class TestPlugin(unittest.TestCase):
         PluginRegistry.register(Cool)
         p = PluginRegistry.get('cool')
         self.assertTrue(isinstance(p, Cool))
+
+    def test_load_direct(self):
+        from services.tests.test_pluginreg import Dummy
+        bad_config = {'backend': 'xxx'}
+        good_config = {'test.backend': 'services.tests.test_pluginreg.Dummy',
+                       'test.foo': 'bar'}
+        self.assertRaises(KeyError, load_and_configure, bad_config)
+        obj = load_and_configure(good_config, 'test')
+        self.assertTrue(isinstance(obj, Dummy))
+        self.assertTrue(obj.foo == 'bar')
 
 
 def test_suite():
