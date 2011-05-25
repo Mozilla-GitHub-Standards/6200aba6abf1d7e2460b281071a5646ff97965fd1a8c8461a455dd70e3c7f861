@@ -111,7 +111,7 @@ class TestSQLAuth(unittest.TestCase):
     def test_no_create(self):
         # testing the create_tables option
         testsdir = os.path.dirname(__file__)
-        conf = os.path.join(testsdir, 'tests.ini')
+        conf = os.path.join(testsdir, 'tests_nocreate.ini')
         appdir, config, auth = initenv(conf)
 
         # this should fail because the table is absent

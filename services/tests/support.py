@@ -41,18 +41,12 @@ from email import message_from_string
 
 from services.auth import ServicesAuth
 from services.util import convert_config
-import services
-
-
-_SYNCDIR = os.path.dirname(services.__file__)
-_TOPDIR = os.path.split(_SYNCDIR)[0]
 
 
 class TestEnv(object):
     """Class to try to establish the base environment for the tests"""
     def __init__(self, base):
-        syncdir = os.path.dirname(base)
-        self.topdir = os.path.split(syncdir)[0]
+        self.topdir = os.path.dirname(base)
 
         if 'WEAVE_TESTFILE' in os.environ:
             test_filename = 'tests_%s.ini' % os.environ['WEAVE_TESTFILE']
@@ -111,7 +105,7 @@ def initenv(config=None):
     The WEAVE_TESTFILE=name environment variable can be used to point
     a particular tests_name.ini file.
     """
-    topdir = os.path.split(_TOPDIR)[0]
+    topdir = os.path.dirname(__file__)
 
     if 'WEAVE_TESTFILE' in os.environ:
         test_filename = 'tests_%s.ini' % os.environ['WEAVE_TESTFILE']
