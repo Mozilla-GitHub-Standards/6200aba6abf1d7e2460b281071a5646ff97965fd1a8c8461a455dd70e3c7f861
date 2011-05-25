@@ -14,11 +14,12 @@
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
-# Portions created by the Initial Developer are Copyright (C) 2010
+# Portions created by the Initial Developer are Copyright (C) 2011
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Toby Elliott (telliott@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,6 +42,7 @@ from email import message_from_string
 
 from services.auth import ServicesAuth
 from services.util import convert_config
+from services.pluginreg import load_and_configure
 
 
 class TestEnv(object):
@@ -54,7 +56,6 @@ class TestEnv(object):
             test_filename = 'tests.ini'
 
         while True:
-
             ini_file = os.path.join(self.topdir, test_filename)
             if os.path.exists(ini_file):
                 break
@@ -76,6 +77,12 @@ class TestEnv(object):
         config = dict([(key, value % here) for key, value in
                       cfg.items('DEFAULT') + cfg.items('app:main')])
         self.config = convert_config(config)
+
+    def add_class(self, section, cls_param="backend"):
+        """Takes the name of a config section and uses it to instantiate a
+        class and put it into the env at self.[name]"""
+        setattr(self, section,
+                load_and_configure(self.config, section, cls_param))
 
 
 def patch_captcha(valid=True):
