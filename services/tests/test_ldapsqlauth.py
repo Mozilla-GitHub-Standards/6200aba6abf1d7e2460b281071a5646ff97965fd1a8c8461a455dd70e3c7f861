@@ -221,7 +221,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
         self.assertFalse(auth.verify_reset_code(uid, code))
 
         # e-mail update
-        self.assertTrue(auth.update_email(uid, 'new@email.com', 'tarek'))
+        self.assertTrue(auth.update_email(uid, 'new@email.com', u'tareké'))
         name, email = auth.get_user_info(uid)
         self.assertEquals(email, 'new@email.com')
         self.assertEquals(name, 'tarek')
