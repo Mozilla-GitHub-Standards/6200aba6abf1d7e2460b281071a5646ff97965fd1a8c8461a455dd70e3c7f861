@@ -13,6 +13,7 @@ PYLINT = bin/pylint
 PYPI2RPM = bin/pypi2rpm.py
 SERVER = dev-auth.services.mozilla.com
 SCHEME = https
+BUILDAPP = bin/buildapp
 
 .PHONY: all build build_extras build_rpms test
 
@@ -20,7 +21,8 @@ all:	build
 
 build:
 	$(VIRTUALENV) --no-site-packages --distribute .
-	$(PYTHON) build.py $(APPNAME) $(DEPS)
+	$(EZ) -U MoPyTools
+	$(BUILDAPP) $(APPNAME) $(DEPS)
 	$(EZ) -U nose
 	$(EZ) -U WebTest
 	$(EZ) -U PasteDeploy
