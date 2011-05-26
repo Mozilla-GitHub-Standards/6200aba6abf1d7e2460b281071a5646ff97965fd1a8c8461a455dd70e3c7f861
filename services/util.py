@@ -492,6 +492,9 @@ def get_url(url, method='GET', data=None, user=None, password=None, timeout=5,
     Returns:
         - tuple : status code, headers, body
     """
+    if isinstance(password, unicode):
+        password = password.encode('utf-8')
+
     req = urllib2.Request(url, data=data)
     req.get_method = lambda: method
 
