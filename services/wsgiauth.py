@@ -118,6 +118,8 @@ class Authentication(object):
                                      'compliant UTF-8')
 
             # let's try an authentication
+            # the authenticate_user API takes a unicode UTF-8 for the password
+            password = password.decode('utf8')
             user_id = self.backend.authenticate_user(user_name, password)
             if user_id is None:
                 err = 'Authentication Failed for Backend service ' + user_name

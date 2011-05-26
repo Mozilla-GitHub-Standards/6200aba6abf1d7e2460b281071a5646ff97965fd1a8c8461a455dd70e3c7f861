@@ -141,7 +141,7 @@ class SQLAuth(ResetCodeManager):
         if user.status != 1:  # user is disabled
             return None
 
-        if validate_password(password, user.password_hash):
+        if validate_password(password.encode('utf-8'), user.password_hash):
             return user.id
 
     def get_user_info(self, user_id):
