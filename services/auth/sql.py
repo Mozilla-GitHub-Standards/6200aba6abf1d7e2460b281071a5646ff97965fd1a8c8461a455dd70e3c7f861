@@ -187,7 +187,7 @@ class SQLAuth(ResetCodeManager):
         """
         # XXX check the old password
         #
-        password_hash = ssha256(password)
+        password_hash = ssha256(password.encode('utf8'))
         query = update(users).where(users.c.id == user_id)
         res = safe_execute(self._engine,
                            query.values(password_hash=password_hash))
@@ -210,7 +210,7 @@ class SQLAuth(ResetCodeManager):
             logger.error("bad key used for update password")
             return False
 
-        password_hash = ssha256(password)
+        password_hash = ssha256(password.encode('utf8'))
         query = update(users).where(users.c.id == user_id)
         res = safe_execute(self._engine,
                            query.values(password_hash=password_hash))
@@ -233,7 +233,8 @@ class SQLAuth(ResetCodeManager):
             if user is None:
                 return False
 
-            if not validate_password(password, user.password_hash):
+            if not validate_password(password.encode('utf8'),
+                                     user.password_hash):
                 return False
 
         query = delete(users).where(users.c.id == user_id)
