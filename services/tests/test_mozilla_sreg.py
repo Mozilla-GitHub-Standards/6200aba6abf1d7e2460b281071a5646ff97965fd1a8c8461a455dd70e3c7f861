@@ -43,8 +43,8 @@ try:
     from services.auth.mozilla_sreg import MozillaAuth
     from services.tests.test_ldapsqlauth import MemoryStateConnector, users
     import wsgi_intercept
-    from wsgi_intercept.urllib2_intercept import install_opener
-    install_opener()
+    from wsgi_intercept.urllib2_intercept import (install_opener,
+                                                  uninstall_opener)
     DO_TESTS = True
 except ImportError:
     DO_TESTS = False
@@ -107,6 +107,10 @@ class TestMozillaSRegAuth(unittest.TestCase):
     def setUp(self):
         global _CPT
         _CPT = 0
+        install_opener()
+
+    def tearDown(self):
+        uninstall_opener()
 
     def test_mozilla_auth(self):
         if not DO_TESTS:

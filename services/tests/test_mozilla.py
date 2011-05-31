@@ -41,8 +41,8 @@ try:
     # using the patching from test_ldapsqlauth
     from services.tests.test_ldapsqlauth import patch, unpatch
     import wsgi_intercept
-    from wsgi_intercept.urllib2_intercept import install_opener
-    install_opener()
+    from wsgi_intercept.urllib2_intercept import (install_opener,
+                                                  uninstall_opener)
     DO_TESTS = True
 except ImportError:
     DO_TESTS = False
@@ -63,10 +63,12 @@ class TestLDAPSQLAuth(unittest.TestCase):
     def setUp(self):
         if DO_TESTS:
             patch()
+            install_opener()
 
     def tearDown(self):
         if DO_TESTS:
             unpatch()
+            uninstall_opener()
 
     def test_mozilla_auth(self):
         if not DO_TESTS:
