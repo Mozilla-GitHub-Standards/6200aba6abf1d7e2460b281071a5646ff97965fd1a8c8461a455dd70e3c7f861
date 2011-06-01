@@ -46,6 +46,7 @@ import itertools
 import struct
 from email.mime.text import MIMEText
 from email.header import Header
+from rfc822 import AddressList
 import smtplib
 import socket
 import re
@@ -239,8 +240,17 @@ def send_email(sender, rcpt, subject, body, smtp_host='localhost',
     """
     # preparing the message
     msg = MIMEText(body.encode('utf8'), 'plain', 'utf8')
-    msg['From'] = Header(sender, 'utf8')
-    msg['To'] = Header(rcpt, 'utf8')
+
+    def _normalize_realname(field):
+        address = AddressList(field).addresslist
+        if len(address) == 1:
+            realname, email = address[0]
+            if realname != '':
+                return '%s <%s>' % (str(Header(realname, 'utf8')), str(email))
+        return field
+
+    msg['From'] = _normalize_realname(sender)
+    msg['To'] = _normalize_realname(rcpt)
     msg['Subject'] = Header(subject, 'utf8')
 
     try:

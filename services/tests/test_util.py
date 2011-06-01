@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -33,7 +34,6 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-# -*- coding: utf-8 -*-
 import unittest
 import time
 import tempfile
@@ -42,6 +42,8 @@ import urllib2
 import socket
 import StringIO
 import sys
+import smtplib
+from email import message_from_string
 
 from services.util import (convert_config, bigint2time,
                            time2bigint, valid_email, batch,
@@ -49,7 +51,8 @@ from services.util import (convert_config, bigint2time,
                            valid_password, json_response,
                            newlines_response, whoisi_response, text_response,
                            extract_username, get_url, proxy,
-                           get_source_ip, CatchErrorMiddleware, round_time)
+                           get_source_ip, CatchErrorMiddleware, round_time,
+                           send_email)
 
 
 _EXTRA = """\
@@ -332,3 +335,79 @@ class TestUtil(unittest.TestCase):
         # changing the precision
         res = round_time(129084.198271987, precision=3)
         self.assertEqual(str(res), '129084.198')
+
+    def test_send_email(self):
+        # let's patch smtplib and collect mails that are being produced
+        # and load them into message objects
+
+        class FakeMailer(object):
+
+            mails = []
+
+            def __init__(self, *args, **kw):
+                pass
+
+            def sendmail(self, sender, rcpts, msg):
+                self.mails.append((sender, rcpts, msg))
+
+            def quit(self):
+                pass
+
+        subject = u"Hello there"
+        body = u"ah yeah"
+        old = smtplib.SMTP
+        smtplib.SMTP = FakeMailer
+        try:
+            # e-mail with real names
+            send_email(u'Tarek Ziadé <tarek@mozilla.com>',
+                       u'John Doe <someone@somewhere.com>',
+                       subject, body)
+
+            # let's load it
+            mail = message_from_string(FakeMailer.mails[-1][-1])
+            self.assertEqual(mail['From'],
+                             '=?utf8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+
+            self.assertEqual(mail['To'],
+                            'John Doe <someone@somewhere.com>')
+
+            # simple e-mail
+            send_email(u'<tarek@mozilla.com>',
+                       u'<someone@somewhere.com>',
+                       subject, body)
+
+            # let's load it
+            mail = message_from_string(FakeMailer.mails[-1][-1])
+            self.assertEqual(mail['From'], '<tarek@mozilla.com>')
+            self.assertEqual(mail['To'], '<someone@somewhere.com>')
+
+            # basic e-mail
+            send_email(u'tarek@mozilla.com',
+                       u'someone@somewhere.com',
+                       subject, body)
+
+            # let's load it
+            mail = message_from_string(FakeMailer.mails[-1][-1])
+            self.assertEqual(mail['From'], 'tarek@mozilla.com')
+            self.assertEqual(mail['To'], 'someone@somewhere.com')
+
+            # XXX That should not happen
+            # now what happens if we get strings
+            send_email('tarek@mozilla.com', 'someone@somewhere.com',
+                       subject, body)
+
+            # let's load it
+            mail = message_from_string(FakeMailer.mails[-1][-1])
+            self.assertEqual(mail['From'], 'tarek@mozilla.com')
+            self.assertEqual(mail['To'], 'someone@somewhere.com')
+
+            send_email('Tarek Ziadé <tarek@mozilla.com>',
+                       'someone@somewhere.com', subject, body)
+
+            # let's load it
+            mail = message_from_string(FakeMailer.mails[-1][-1])
+            self.assertEqual(mail['From'],
+                             '=?utf8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+            self.assertEqual(mail['To'], 'someone@somewhere.com')
+        finally:
+            smtplib.SMTP = old
