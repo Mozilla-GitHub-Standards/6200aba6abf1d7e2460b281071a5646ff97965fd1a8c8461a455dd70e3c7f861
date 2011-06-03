@@ -107,10 +107,12 @@ class TestMozillaSRegAuth(unittest.TestCase):
     def setUp(self):
         global _CPT
         _CPT = 0
-        install_opener()
+        if DO_TESTS:
+            install_opener()
 
     def tearDown(self):
-        uninstall_opener()
+        if DO_TESTS:
+            uninstall_opener()
 
     def test_mozilla_auth(self):
         if not DO_TESTS:
