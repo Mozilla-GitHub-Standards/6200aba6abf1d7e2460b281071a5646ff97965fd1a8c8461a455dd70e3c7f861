@@ -14,6 +14,28 @@ PYPI2RPM = bin/pypi2rpm.py
 SERVER = dev-auth.services.mozilla.com
 SCHEME = https
 BUILDAPP = bin/buildapp
+EZOPTIONS = -U -i $(PYPI)
+PYPI = http://pypi.python.org/simple
+PYPIOPTIONS = -i $(PYPI)
+
+ifdef PYPIEXTRAS
+	PYPIOPTIONS += -e $(PYPIEXTRAS)
+	EZOPTIONS += -f $(PYPIEXTRAS)
+endif
+
+ifdef PYPISTRICT
+	PYPIOPTIONS += -s
+	ifdef PYPIEXTRAS
+		HOST = `python -c "import urlparse; print urlparse.urlparse('$(PYPI)')[1] + ',' + urlparse.urlparse('$(PYPIEXTRAS)')[1]"`
+
+	else
+		HOST = `python -c "import urlparse; print urlparse.urlparse('$(PYPI)')[1]"`
+	endif
+	EZOPTIONS += --allow-hosts=$(HOST)
+endif
+
+EZ += $(EZOPTIONS)
+
 
 .PHONY: all build build_extras build_rpms test
 
@@ -21,22 +43,22 @@ all:	build
 
 build:
 	$(VIRTUALENV) --no-site-packages --distribute .
-	$(EZ) -U MoPyTools
-	$(BUILDAPP) $(APPNAME) $(DEPS)
-	$(EZ) -U nose
-	$(EZ) -U WebTest
-	$(EZ) -U PasteDeploy
+	$(EZ) MoPyTools
+	$(BUILDAPP) $(PYPIOPTIONS) $(APPNAME) $(DEPS)
+	$(EZ) nose
+	$(EZ) WebTest
+	$(EZ) PasteDeploy
 
 build_extras:
-	$(EZ) -U mysql-python
-	$(EZ) -U recaptcha-client
-	$(EZ) -U wsgiproxy
-	$(EZ) -U wsgi_intercept
+	$(EZ) mysql-python
+	$(EZ) recaptcha-client
+	$(EZ) wsgiproxy
+	$(EZ) wsgi_intercept
 	$(EZ) http://ziade.org/python-ldap-2.3.12.tar.gz
-	$(EZ) -U coverage
-	$(EZ) -U flake8
-	$(EZ) -U pylint
-	$(EZ) -U pygments
+	$(EZ) coverage
+	$(EZ) flake8
+	$(EZ) pylint
+	$(EZ) pygments
 
 test:
 	$(NOSE) $(TESTS)
@@ -46,7 +68,7 @@ coverage:
 	- $(NOSE) $(COVEROPTS) $(TESTS)
 
 build_rpms:
-	$(EZ) -U pypi2rpm
+	$(EZ) pypi2rpm
 	rm -rf $(CURDIR)/rpms
 	mkdir $(CURDIR)/rpms
 	rm -rf build; $(PYTHON) setup.py --command-packages=pypi2rpm.command bdist_rpm2 --spec-file=Services.spec --dist-dir=$(CURDIR)/rpms
