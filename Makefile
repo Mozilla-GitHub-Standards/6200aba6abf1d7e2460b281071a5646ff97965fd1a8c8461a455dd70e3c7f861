@@ -50,15 +50,15 @@ build:
 	$(EZ) PasteDeploy
 
 build_extras:
-	$(EZ) mysql-python
+	$(EZ) MySQL-python
 	$(EZ) recaptcha-client
 	$(EZ) wsgiproxy
 	$(EZ) wsgi_intercept
-	$(EZ) http://ziade.org/python-ldap-2.3.12.tar.gz
+	$(EZ) "python-ldap == 2.3.12"
 	$(EZ) coverage
 	$(EZ) flake8
 	$(EZ) pylint
-	$(EZ) pygments
+	$(EZ) Pygments
 
 test:
 	$(NOSE) $(TESTS)
