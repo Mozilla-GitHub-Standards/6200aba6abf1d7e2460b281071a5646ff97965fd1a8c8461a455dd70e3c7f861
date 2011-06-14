@@ -495,8 +495,8 @@ class LDAPAuth(ResetCodeManager):
         actives = res.actives
 
         # updating LDAP now
-        user = [(ldap.MOD_REPLACE, 'primaryNode',
-                ['weave:%s' % node])]
+        user = [(ldap.MOD_REPLACE, 'primaryNode', ['weave:%s' % node]),
+                (ldap.MOD_REPLACE, 'syncNode', node)]
 
         with self._conn(self.admin_user, self.admin_password) as conn:
             try:
