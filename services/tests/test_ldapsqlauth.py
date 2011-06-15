@@ -115,7 +115,7 @@ if LDAP:
 
             user = self.users[who]
             pass_ = user['userPassword'][0]
-            if not validate_password(passwd, pass_):
+            if not validate_password(passwd.decode('utf8'), pass_):
                 raise ldap.INVALID_CREDENTIALS(who, passwd)
 
             self.connected = True

@@ -104,6 +104,8 @@ class ConnectionManager(object):
         return len(self._pool)
 
     def _match(self, bind, passwd):
+        passwd = passwd.encode('utf8')
+
         with self._pool_lock:
             for conn in list(self._pool):
                 if conn.active:
@@ -135,7 +137,13 @@ class ConnectionManager(object):
         return None
 
     def _create_connector(self, bind, passwd):
-        """Creates a connector, binds it, and returns it"""
+        """Creates a connector, binds it, and returns it
+
+        Args:
+            - bind: login
+            - passwd: password
+        """
+        passwd = passwd.encode('utf8')
         conn = self.connector_cls(self.uri, retry_max=self.retry_max,
                                   retry_delay=self.retry_delay)
         conn.timeout = self.timeout
@@ -219,6 +227,13 @@ class ConnectionManager(object):
 
     @contextmanager
     def connection(self, bind=None, passwd=None):
+        """Creates a context'ed connector, binds it, and returns it
+
+        Args:
+            - bind: login
+            - passwd: password
+        """
+
         tries = 0
         conn = None
         while tries < self.retry_max:
@@ -245,8 +260,18 @@ class ConnectionManager(object):
             self._release_connection(conn)
 
     def purge(self, bind, passwd=None):
+        """Purge a connector
+
+        Args:
+            - bind: login
+            - passwd: password
+        """
+
         if self.use_pool:
             return
+
+        if passwd is not None:
+            passwd = passwd.encode('utf8')
 
         with self._pool_lock:
             for conn in list(self._pool):

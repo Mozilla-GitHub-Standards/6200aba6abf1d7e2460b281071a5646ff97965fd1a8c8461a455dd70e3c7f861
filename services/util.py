@@ -190,7 +190,13 @@ def _gensalt():
 
 
 def ssha(password, salt=None):
-    """Returns a Salted-SHA password"""
+    """Returns a Salted-SHA password
+
+    Args:
+        password: password
+        salt: salt to use. If none, one is generated
+    """
+    password = password.encode('utf8')
     if salt is None:
         salt = _gensalt()
     ssha = base64.b64encode(sha1(password + salt).digest()
@@ -199,7 +205,14 @@ def ssha(password, salt=None):
 
 
 def ssha256(password, salt=None):
-    """Returns a Salted-SHA256 password"""
+    """Returns a Salted-SHA256 password
+
+    Args:
+        password: password
+        salt: salt to use. If none, one is generated
+
+    """
+    password = password.encode('utf8')
     if salt is None:
         salt = _gensalt()
     ssha = base64.b64encode(sha256(password + salt).digest()
@@ -208,7 +221,12 @@ def ssha256(password, salt=None):
 
 
 def validate_password(clear, hash):
-    """Validates a Salted-SHA(256) password"""
+    """Validates a Salted-SHA(256) password
+
+    Args:
+        clear: password in clear text
+        hash: hash of the password
+    """
     if hash.startswith('{SSHA-256}'):
         real_hash = hash.split('{SSHA-256}')[-1]
         hash_meth = ssha256
@@ -217,6 +235,8 @@ def validate_password(clear, hash):
         hash_meth = ssha
 
     salt = base64.decodestring(real_hash)[-_SALT_LEN:]
+
+    # both hash_meth take a unicode value for clear
     password = hash_meth(clear, salt)
     return password == hash
 
@@ -226,10 +246,10 @@ def send_email(sender, rcpt, subject, body, smtp_host='localhost',
     """Sends a text/plain email synchronously.
 
     Args:
-        sender: sender address - unicode + utf8
-        rcpt: recipient address - unicode + utf8
-        subject: subject - unicode + utf8
-        body: email body - unicode + utf8
+        sender: sender address
+        rcpt: recipient address
+        subject: subject
+        body: email body
         smtp_host: smtp server -- defaults to localhost
         smtp_port: smtp port -- defaults to 25
         smtp_user: smtp user if the smtp server requires it
@@ -306,6 +326,8 @@ def valid_password(user_name, password):
     Returns:
         True or False
     """
+    password = password.encode('utf8')
+
     if len(password) < 8:
         return False
     return user_name.lower().strip() != password.lower().strip()

@@ -1,3 +1,4 @@
+# -*- encoding: utf8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -218,7 +219,6 @@ class LDAPAuth(ResetCodeManager):
     def create_user(self, user_name, password, email):
         """Creates a user. Returns True on success."""
         user_name = str(user_name)   # XXX only ASCII
-        password = password.encode('utf-8')
         user_id = self._get_next_user_id()
         password_hash = ssha(password)
         key = '%s%s' % (random.randint(0, 9999999), user_name)
@@ -252,7 +252,6 @@ class LDAPAuth(ResetCodeManager):
 
         Returns the user id in case of success. Returns None otherwise."""
         dn = self._username2dn(user_name)
-        password = password.encode('utf-8')
         if dn is None:
             # unknown user, we can return immediatly
             return None
@@ -324,7 +323,6 @@ class LDAPAuth(ResetCodeManager):
         if password is None:
             raise NotImplementedError('Password required.')
 
-        password = password.encode('utf-8')
         user = [(ldap.MOD_REPLACE, 'mail', [email])]
         # not going to change this behavior yet
         #user = [(ldap.MOD_REPLACE, 'mail', [email]),
@@ -359,10 +357,8 @@ class LDAPAuth(ResetCodeManager):
         if user_dn is None:
             raise BackendError('Unknown user "%s"' % user_id)
 
-        old_password = old_password.encode('utf-8')
-        new_password = new_password.encode('utf-8')
-
         password_hash = ssha(new_password)
+
         user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
 
         try:
@@ -402,7 +398,6 @@ class LDAPAuth(ResetCodeManager):
             logger.error("bad key used for update password")
             return False
 
-        new_password = new_password.encode('utf-8')
         password_hash = ssha(new_password)
         user = [(ldap.MOD_REPLACE, 'userPassword', [password_hash])]
 

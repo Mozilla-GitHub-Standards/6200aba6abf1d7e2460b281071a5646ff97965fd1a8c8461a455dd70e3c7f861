@@ -123,7 +123,7 @@ class SQLAuth(ResetCodeManager):
 
     def create_user(self, user_name, password, email):
         """Creates a user. Returns True on success."""
-        password_hash = ssha256(password.encode('utf8'))
+        password_hash = ssha256(password)
         query = insert(users).values(username=user_name, email=email,
                                      password_hash=password_hash, status=1)
         res = safe_execute(self._engine, query)
@@ -141,7 +141,7 @@ class SQLAuth(ResetCodeManager):
         if user.status != 1:  # user is disabled
             return None
 
-        if validate_password(password.encode('utf-8'), user.password_hash):
+        if validate_password(password, user.password_hash):
             return user.id
 
     def get_user_info(self, user_id):
@@ -187,7 +187,7 @@ class SQLAuth(ResetCodeManager):
         """
         # XXX check the old password
         #
-        password_hash = ssha256(password.encode('utf8'))
+        password_hash = ssha256(password)
         query = update(users).where(users.c.id == user_id)
         res = safe_execute(self._engine,
                            query.values(password_hash=password_hash))
@@ -210,7 +210,7 @@ class SQLAuth(ResetCodeManager):
             logger.error("bad key used for update password")
             return False
 
-        password_hash = ssha256(password.encode('utf8'))
+        password_hash = ssha256(password)
         query = update(users).where(users.c.id == user_id)
         res = safe_execute(self._engine,
                            query.values(password_hash=password_hash))
@@ -233,8 +233,7 @@ class SQLAuth(ResetCodeManager):
             if user is None:
                 return False
 
-            if not validate_password(password.encode('utf8'),
-                                     user.password_hash):
+            if not validate_password(password, user.password_hash):
                 return False
 
         query = delete(users).where(users.c.id == user_id)
