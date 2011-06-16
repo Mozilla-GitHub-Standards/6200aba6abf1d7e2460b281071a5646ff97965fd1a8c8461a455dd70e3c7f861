@@ -10,12 +10,12 @@ TESTS = services
 PKGS = services
 COVERAGE = bin/coverage
 PYLINT = bin/pylint
-PYPI2RPM = bin/pypi2rpm.py
 SERVER = dev-auth.services.mozilla.com
 SCHEME = https
 BUILDAPP = bin/buildapp
 EZOPTIONS = -U -i $(PYPI)
 PYPI = http://pypi.python.org/simple
+PYPI2RPM = bin/pypi2rpm.py --index=$(PYPI)
 PYPIOPTIONS = -i $(PYPI)
 
 ifdef PYPIEXTRAS
