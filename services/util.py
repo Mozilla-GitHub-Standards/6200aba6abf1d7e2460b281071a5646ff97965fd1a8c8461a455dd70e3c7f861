@@ -525,7 +525,7 @@ def get_url(url, method='GET', data=None, user=None, password=None, timeout=5,
         - tuple : status code, headers, body
     """
     if isinstance(password, unicode):
-        password = password.encode('iso8859-15')
+        password = password.encode('utf-8')
 
     req = urllib2.Request(url, data=data)
     req.get_method = lambda: method
