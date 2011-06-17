@@ -42,6 +42,7 @@ Warning
   which is used to generate http://docs.services.mozilla.com/respcodes.html
 """
 
+# DEPRECATED AND SOON TO BE REMOVED. USE ERROR_* INSTEAD
 WEAVE_ILLEGAL_METH = 1              # Illegal method/protocol
 WEAVE_INVALID_CAPTCHA = 2           # Incorrect/missing captcha
 WEAVE_INVALID_USER = 3              # Invalid/missing username

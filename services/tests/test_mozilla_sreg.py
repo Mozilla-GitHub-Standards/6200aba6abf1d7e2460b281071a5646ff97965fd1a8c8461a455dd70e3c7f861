@@ -36,7 +36,7 @@
 import unittest
 from webob import Response
 from services.auth import NoEmailError, InvalidCodeError
-from services.respcodes import WEAVE_NO_EMAIL_ADRESS, WEAVE_INVALID_RESET_CODE
+from services.respcodes import ERROR_NO_EMAIL_ADDRESS, ERROR_INVALID_RESET_CODE
 
 
 try:
@@ -77,11 +77,11 @@ def fake_response2():
     if _CPT == 0:
         r = Response()
         r.status = '400 Bad Request'
-        r.body = str(WEAVE_NO_EMAIL_ADRESS)
+        r.body = str(ERROR_NO_EMAIL_ADDRESS)
     elif _CPT == 1:
         r = Response()
         r.status = '400 Bad Request'
-        r.body = str(WEAVE_INVALID_RESET_CODE)
+        r.body = str(ERROR_INVALID_RESET_CODE)
 
     _CPT += 1
     return r
