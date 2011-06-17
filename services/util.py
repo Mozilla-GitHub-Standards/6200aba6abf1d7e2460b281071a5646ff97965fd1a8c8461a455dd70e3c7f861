@@ -39,7 +39,7 @@ Various utilities
 import traceback
 import random
 import string
-from hashlib import sha256, sha1
+from hashlib import sha256, sha1, md5
 import base64
 import simplejson as json
 import itertools
@@ -58,7 +58,7 @@ from urlparse import urlparse, urlunparse
 from decimal import Decimal, InvalidOperation
 import time
 
-from webob.exc import HTTPBadRequest
+from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
 from sqlalchemy.exc import OperationalError
@@ -440,6 +440,26 @@ class HTTPJsonBadRequest(HTTPBadRequest):
         return resp(environ, start_response)
 
 
+class HTTPJsonServiceUnavailable(HTTPServiceUnavailable):
+    """Allow WebOb Exception to hold Json responses.
+
+    XXX Should be fixed in WebOb
+    """
+    def generate_response(self, environ, start_response):
+        if self.content_length is not None:
+            del self.content_length
+
+        headerlist = [(key, value) for key, value in
+                      list(self.headerlist)
+                      if key != 'Content-Type']
+        body = json.dumps(self.detail, use_decimal=True)
+        resp = Response(body,
+            status=self.status,
+            headerlist=headerlist,
+            content_type='application/json')
+        return resp(environ, start_response)
+
+
 def email_to_idn(addr):
     """ Convert an UTF-8 encoded email address to it's IDN (punycode)
         equivalent
@@ -473,7 +493,7 @@ def extract_username(username):
 class CatchErrorMiddleware(object):
     """Middleware that catches error, log them and return a 500"""
     def __init__(self, app, logger_name='root', hook=None,
-                 type='text/plain'):
+                 type='application/json'):
         self.app = app
         self.logger = logging.getLogger(logger_name)
         self.hook = hook
@@ -484,10 +504,13 @@ class CatchErrorMiddleware(object):
             return self.app(environ, start_response)
         except:
             err = traceback.format_exc()
+            hash = create_hash(err)
+            self.logger.error(hash)
             self.logger.error(err)
             start_response('500 Internal Server Error',
                            [('content-type', self.ctype)])
-            response = "An unexpected error occurred"
+
+            response = json.dumps("application error: crash id %s" % hash)
             if self.hook:
                 try:
                     response = self.hook()
@@ -619,3 +642,12 @@ def get_source_ip(environ):
     elif 'REMOTE_ADDR' in environ:
         return environ['REMOTE_ADDR']
     return None
+
+
+def create_hash(data):
+    """Creates a unique hash using the data provided
+    and a bit of randomness
+    """
+    rand = ''.join([randchar() for x in range(10)])
+    data += rand
+    return md5(data + rand).hexdigest()

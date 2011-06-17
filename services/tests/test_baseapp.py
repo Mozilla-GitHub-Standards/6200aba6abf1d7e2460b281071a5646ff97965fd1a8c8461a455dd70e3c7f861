@@ -71,7 +71,8 @@ class TestBaseApp(unittest.TestCase):
 
     def setUp(self):
         urls = [('POST', '/', 'foo', 'index'),
-                ('GET', '/secret', 'foo', 'secret', {'auth': True})]
+                ('GET', '/secret', 'foo', 'secret', {'auth': True}),
+                ('GET', '/boom', 'foo', 'boom')]
         controllers = {'foo': _Foo}
         config = {'host:here.one.two': 1,
                   'one.two': 2,
@@ -189,6 +190,16 @@ class TestBaseApp(unittest.TestCase):
             unsubscribe(REQUEST_ENDS, ends)
 
         self.assertEquals(pings, ['starts', 'ends'])
+
+    def test_crash_id(self):
+        # getting a 50x should generate a crash id
+        request = _Request('GET', '/boom', 'localhost')
+        try:
+            self.app(request)
+        except HTTPServiceUnavailable, err:
+            self.assertTrue('application error: crash id' in str(err))
+        else:
+            raise AssertionError('Should raise')
 
 
 def test_suite():

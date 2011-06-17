@@ -312,7 +312,23 @@ class TestUtil(unittest.TestCase):
             sys.stdout = old_std
 
         self.assertEqual(result[0], "hello")
-        self.assertEqual(len(errs), 1)
+        self.assertEqual(len(errs), 2)
+        # the first error logged is a md5 hash
+        self.assertEqual(len(errs[0]), 32)
+
+        # let's test the response
+        app = CatchErrorMiddleware(BadClass())
+        errs = []
+        app.logger.error = _error
+        old_std = sys.stdout
+        sys.stdout = StringIO.StringIO()
+        try:
+            result = app({}, fake_start_response)
+        finally:
+            sys.stdout = old_std
+
+        self.assertTrue(
+            result[0].startswith('"application error: crash id'))
 
     def test_round_time(self):
 

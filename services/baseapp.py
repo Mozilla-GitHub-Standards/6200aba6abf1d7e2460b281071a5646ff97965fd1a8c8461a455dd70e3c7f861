@@ -37,6 +37,7 @@
 Application entry point.
 """
 import traceback
+import simplejson as json
 
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
@@ -44,11 +45,11 @@ from paste.exceptions.errormiddleware import ErrorMiddleware
 from routes import Mapper
 
 from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPBadRequest, HTTPServiceUnavailable
+from webob.exc import HTTPNotFound, HTTPBadRequest
 from webob import Response
 
 from services.util import (convert_config, CatchErrorMiddleware, round_time,
-                           BackendError)
+                         BackendError, create_hash, HTTPJsonServiceUnavailable)
 from services import logger
 from services.wsgiauth import Authentication
 from services.controllers import StandardController
@@ -220,8 +221,11 @@ class SyncServerApp(object):
             result = function(request, **params)
         except BackendError:
             err = traceback.format_exc()
+            hash = create_hash(err)
+            logger.error(hash)
             logger.error(err)
-            raise HTTPServiceUnavailable(retry_after=self.retry_after)
+            msg = json.dumps("application error: crash id %s" % hash)
+            raise HTTPJsonServiceUnavailable(msg, retry_after=self.retry_after)
 
         if isinstance(result, basestring):
             response = getattr(request, 'response', None)
