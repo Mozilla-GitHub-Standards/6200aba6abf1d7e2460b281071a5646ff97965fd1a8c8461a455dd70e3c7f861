@@ -448,15 +448,11 @@ class HTTPJsonServiceUnavailable(HTTPServiceUnavailable):
     def generate_response(self, environ, start_response):
         if self.content_length is not None:
             del self.content_length
-
-        headerlist = [(key, value) for key, value in
-                      list(self.headerlist)
-                      if key != 'Content-Type']
+        self.headers['Content-Type'] = 'application/json'
         body = json.dumps(self.detail, use_decimal=True)
         resp = Response(body,
             status=self.status,
-            headerlist=headerlist,
-            content_type='application/json')
+            headerlist=self.headers.items())
         return resp(environ, start_response)
 
 
