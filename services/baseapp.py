@@ -54,7 +54,7 @@ from services import logger
 from services.wsgiauth import Authentication
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, notify
-
+from services.user import User
 
 class SyncServerApp(object):
     """ Dispatches the request to the right controller by using Routes.
@@ -210,6 +210,11 @@ class SyncServerApp(object):
 
         # extracting all the info from the headers and the url
         request.sync_info = match
+
+        # creating a user object to be passed around the request
+        request.user = User()
+        if 'username' in request.sync_info:
+            request.user['username'] = request.sync_info['username']
 
         # the GET mapping is filled on GET and DELETE requests
         if request.method in ('GET', 'DELETE'):

@@ -66,12 +66,16 @@ class _Foo(object):
     def boom(self, request):
         raise BackendError()
 
+    def user(self, request):
+        return '|%s|' % request.user.get('username', None)
+
 
 class TestBaseApp(unittest.TestCase):
 
     def setUp(self):
         urls = [('POST', '/', 'foo', 'index'),
                 ('GET', '/secret', 'foo', 'secret', {'auth': True}),
+                ('GET', '/user/{username:[a-zA-Z0-9._-]+}', 'foo', 'user'),
                 ('GET', '/boom', 'foo', 'boom')]
         controllers = {'foo': _Foo}
         config = {'host:here.one.two': 1,
@@ -163,6 +167,16 @@ class TestBaseApp(unittest.TestCase):
         res = app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("DEEBOOG" in res.body)
+
+
+    def test_user(self):
+
+        # the debug page returns a the right username in the body
+        request = _Request('GET', '/user/testuser', 'localhost')
+        res = self.app(request)
+        self.assertEqual(res.status_int, 200)
+        self.assertTrue("|testuser|" in res.body)
+
 
     def test_events(self):
 
