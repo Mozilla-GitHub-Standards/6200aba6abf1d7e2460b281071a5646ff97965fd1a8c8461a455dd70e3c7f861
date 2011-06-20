@@ -217,12 +217,7 @@ class SyncServerApp(object):
         if 'username' in request.sync_info:
             request.user['username'] = request.sync_info['username']
 
-        # the GET mapping is filled on GET and DELETE requests
-        if request.method in ('GET', 'DELETE'):
-            params = dict(request.GET)
-        else:
-            params = {}
-
+        params = self._get_params(request)
         try:
             result = function(request, **params)
         except BackendError:
@@ -240,6 +235,12 @@ class SyncServerApp(object):
         response.headers['X-Weave-Timestamp'] = str(request.server_time)
         response.headers.update(before_headers)
         return response
+
+    def _get_params(self, request):
+        # the GET mapping is filled on GET and DELETE requests
+        if request.method in ('GET', 'DELETE'):
+            return dict(request.GET)
+        return {}
 
     def _create_response(self, request, result, function):
         if not isinstance(result, basestring):
