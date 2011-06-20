@@ -207,7 +207,7 @@ class SyncServerApp(object):
 
         function = self._get_function(match['controller'], match['action'])
         if function is None:
-            raise HTTPNotFound('Unkown URL %r' % request.path_info)
+            raise HTTPNotFound('Unknown URL %r' % request.path_info)
 
         # extracting all the info from the headers and the url
         request.sync_info = match
