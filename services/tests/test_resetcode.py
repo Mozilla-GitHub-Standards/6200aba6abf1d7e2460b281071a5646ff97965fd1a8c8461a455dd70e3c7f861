@@ -14,10 +14,11 @@
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
-# Portions created by the Initial Developer are Copyright (C) 2010
+# Portions created by the Initial Developer are Copyright (C) 2011
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   Toby Elliott (telliott@mozilla.com)
 #   Tarek Ziade (tarek@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
@@ -34,27 +35,94 @@
 #
 # ***** END LICENSE BLOCK *****
 import unittest
-from services.auth.resetcode import ResetCodeManager
-from sqlalchemy import create_engine
+import time
+
+from services.pluginreg import load_and_configure
+from services.auth import User
+
+from webob import Response
+from services.auth import NoEmailError
+from services.resetcodes import AlreadySentError
+from services.respcodes import ERROR_NO_EMAIL_ADDRESS
 
 
 class TestResetCodeManager(unittest.TestCase):
 
-    def test_reset_code(self):
+    def _tests(self, mgr):
+        user = User()
+        user['userId'] = 1
 
-        engine = create_engine('sqlite:///:memory:')
-        mgr = ResetCodeManager(engine, True)
-
-        code = mgr.generate_reset_code(1)
-        self.assertEqual(code, mgr.generate_reset_code(1))
-        code2 = mgr.generate_reset_code(1, True)
+        code = mgr.generate_reset_code(user)
+        self.assertEqual(code, mgr.generate_reset_code(user))
+        code2 = mgr.generate_reset_code(user, True)
         self.assertNotEqual(code, code2)
 
-        self.assertFalse(mgr.verify_reset_code(1, code))
-        self.assertTrue(mgr.verify_reset_code(1, code2))
+        self.assertFalse(mgr.verify_reset_code(user, code))
+        self.assertTrue(mgr.verify_reset_code(user, code2))
 
-        mgr.clear_reset_code(1)
-        self.assertFalse(mgr.verify_reset_code(1, code2))
+        time.sleep(1)
+        self.assertFalse(mgr.verify_reset_code(user, code2))
+
+        code3 = mgr.generate_reset_code(user, True)
+        self.assertTrue(mgr.verify_reset_code(user, code3))
+        mgr.clear_reset_code(user)
+        self.assertFalse(mgr.verify_reset_code(user, code3))
+
+    def test_reset_code_sql(self):
+
+        config = {'backend': 'services.resetcodes.rc_sql.ResetCodeSQL',
+                  'sqluri': 'sqlite:///:memory:',
+                  'create_tables': True,
+                  'expiration': 1
+                 }
+        self._tests(load_and_configure(config))
+
+    def test_reset_code_memcache(self):
+        try:
+            import memcache
+        except ImportError:
+            return
+
+        config = {'backend':
+                        'services.resetcodes.rc_memcache.ResetCodeMemcache',
+                  'nodes': ['127.0.0.1:11211'],
+                  'debug': 1,
+                  'expiration': 1
+                 }
+        self._tests(load_and_configure(config))
+
+    def test_reset_code_sreg(self):
+        try:
+            import wsgi_intercept
+            from wsgi_intercept.urllib2_intercept import install_opener
+            install_opener()
+        except ImportError:
+            return
+
+        def _fake_response():
+            return Response('0')
+
+        def _no_email_response():
+            r = Response()
+            r.status = '400 Bad Request'
+            r.body = str(ERROR_NO_EMAIL_ADDRESS)
+            return r
+
+        config = {'backend': 'services.resetcodes.rc_sreg.ResetCodeSreg',
+                  'sreg_location': 'localhost',
+                  'sreg_path': '',
+                  'sreg_scheme': 'http'
+                 }
+        mgr = load_and_configure(config)
+        user = User()
+        user['userId'] = 1
+        user['userName'] = 'telliott'
+
+        wsgi_intercept.add_wsgi_intercept('localhost', 80, _fake_response)
+        self.assertRaises(AlreadySentError, mgr.generate_reset_code, user)
+
+        wsgi_intercept.add_wsgi_intercept('localhost', 80, _no_email_response)
+        self.assertRaises(NoEmailError, mgr.generate_reset_code, user)
 
 
 def test_suite():
