@@ -56,6 +56,7 @@ from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, notify
 from services.user import User
 
+
 class SyncServerApp(object):
     """ Dispatches the request to the right controller by using Routes.
     """
@@ -232,26 +233,31 @@ class SyncServerApp(object):
             msg = json.dumps("application error: crash id %s" % hash)
             raise HTTPJsonServiceUnavailable(msg, retry_after=self.retry_after)
 
-        if isinstance(result, basestring):
-            response = getattr(request, 'response', None)
-            if response is None:
-                response = Response(result)
-            elif isinstance(result, str):
-                response.body = result
-            else:
-                # if it's not str it's unicode, which really shouldn't happen
-                module = getattr(function, '__module__', 'unknown')
-                name = getattr(function, '__name__', 'unknown')
-                logger.warn('Unicode response returned from: %s - %s'
-                            % (module, name))
-                response.unicode_body = result
-        else:
-            # result is already a Response
-            response = result
+        # create the response object in case we get back a string
+        response = self._create_response(request, result, function)
 
         # setting up the X-Weave-Timestamp
         response.headers['X-Weave-Timestamp'] = str(request.server_time)
         response.headers.update(before_headers)
+        return response
+
+    def _create_response(self, request, result, function):
+        if not isinstance(result, basestring):
+            # result is already a Response
+            return result
+
+        response = getattr(request, 'response', None)
+        if response is None:
+            response = Response(result)
+        elif isinstance(result, str):
+            response.body = result
+        else:
+            # if it's not str it's unicode, which really shouldn't happen
+            module = getattr(function, '__module__', 'unknown')
+            name = getattr(function, '__name__', 'unknown')
+            logger.warn('Unicode response returned from: %s - %s'
+                        % (module, name))
+            response.unicode_body = result
         return response
 
     def _get_function(self, controller, action):

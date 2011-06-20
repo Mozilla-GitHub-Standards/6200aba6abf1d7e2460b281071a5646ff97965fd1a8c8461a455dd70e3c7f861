@@ -112,8 +112,8 @@ class ResetCodeSQL(ResetCode):
     def _set_reset_code(self, user_id):
         code = self._generate_reset_code()
         query = delete(reset_codes).where(
-                                    and_(reset_codes.c.username == user_id,
-                                         reset_codes.c.product == self.product))
+                                   and_(reset_codes.c.username == user_id,
+                                        reset_codes.c.product == self.product))
         self._engine.execute(query)
 
         expiration_time = datetime.datetime.now() + \

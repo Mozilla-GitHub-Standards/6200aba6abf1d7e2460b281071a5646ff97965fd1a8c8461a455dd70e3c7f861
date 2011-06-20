@@ -168,15 +168,12 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertTrue("DEEBOOG" in res.body)
 
-
     def test_user(self):
-
         # the debug page returns a the right username in the body
         request = _Request('GET', '/user/testuser', 'localhost')
         res = self.app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("|testuser|" in res.body)
-
 
     def test_events(self):
 

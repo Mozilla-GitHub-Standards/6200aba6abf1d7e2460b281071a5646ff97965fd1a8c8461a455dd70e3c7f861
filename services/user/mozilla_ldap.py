@@ -399,7 +399,8 @@ class LDAPUser(object):
 
             value = record[0][1]['uidNumber'][0]
             if value == previous_loop_value:
-                #this is bad. It means the problem isn't a race condition. Bail.
+                # this is bad. It means the problem isn't a race condition.
+                # Bail.
                 logger.error('failed uid increment, loop value is unchanged')
                 raise BackendError('unable to generate new account')
             previous_loop_value = value
@@ -417,7 +418,8 @@ class LDAPUser(object):
                     #if we don't bomb out here, we have a valid id
                     return new_value
                 except ldap.NO_SUCH_ATTRIBUTE, e:
-                    logger.error('collision on getting next id. %i' % new_value)
+                    logger.error('collision on getting next id. %i' \
+                            % new_value)
                     flag = flag + 1
                     continue
                 except ldap.LDAPError, e:

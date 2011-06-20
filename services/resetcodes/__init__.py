@@ -42,6 +42,7 @@ import string
 from services.util import randchar
 from services.user import NoUserIDError
 
+
 class AlreadySentError(Exception):
     """Raised to indicate the backend has handled the reset code request"""
     pass

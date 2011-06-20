@@ -73,13 +73,12 @@ class TestResetCodeManager(unittest.TestCase):
         config = {'backend': 'services.resetcodes.rc_sql.ResetCodeSQL',
                   'sqluri': 'sqlite:///:memory:',
                   'create_tables': True,
-                  'expiration': 1
-                 }
+                  'expiration': 1}
         self._tests(load_and_configure(config))
 
     def test_reset_code_memcache(self):
         try:
-            import memcache
+            import memcache   # NOQA
         except ImportError:
             return
 
@@ -87,8 +86,8 @@ class TestResetCodeManager(unittest.TestCase):
                         'services.resetcodes.rc_memcache.ResetCodeMemcache',
                   'nodes': ['127.0.0.1:11211'],
                   'debug': 1,
-                  'expiration': 1
-                 }
+                  'expiration': 1}
+
         self._tests(load_and_configure(config))
 
     def test_reset_code_sreg(self):
@@ -111,8 +110,8 @@ class TestResetCodeManager(unittest.TestCase):
         config = {'backend': 'services.resetcodes.rc_sreg.ResetCodeSreg',
                   'sreg_location': 'localhost',
                   'sreg_path': '',
-                  'sreg_scheme': 'http'
-                 }
+                  'sreg_scheme': 'http'}
+
         mgr = load_and_configure(config)
         user = User()
         user['userId'] = 1

@@ -131,9 +131,10 @@ class ServicesUser(PluginRegistry):
     @abc.abstractmethod
     def admin_update_field(self, user, key, value):
         """
-        Change the value of a field in the user record. Does this as admin. This
-        assumes that a reset code or something similar has already been verified
-        by the application, or the function is being called internally.
+        Change the value of a field in the user record. Does this as admin.
+        This assumes that a reset code or something similar has already
+        been verified by the application, or the function is being called
+        internally.
 
         Args:
             user: user object
@@ -180,7 +181,8 @@ class ServicesUser(PluginRegistry):
 
         Args:
             user: the user object
-            password: the user password, if one needs to be proxied to a backend
+            password: the user password, if one needs to be proxied
+            to a backend
 
         Returns:
             True if the deletion was successful, False otherwise
