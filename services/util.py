@@ -242,7 +242,7 @@ def validate_password(clear, hash):
 
 
 def send_email(sender, rcpt, subject, body, smtp_host='localhost',
-               smtp_port=25, smtp_user=None, smtp_password=None):
+               smtp_port=25, smtp_user=None, smtp_password=None, **kw):
     """Sends a text/plain email synchronously.
 
     Args:
