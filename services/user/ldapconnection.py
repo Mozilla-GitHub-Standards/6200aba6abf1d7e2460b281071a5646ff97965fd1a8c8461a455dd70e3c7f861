@@ -84,11 +84,11 @@ class ConnectionManager(object):
 
     Provides a context manager for LDAP connectors.
     """
-    def __init__(self, uri, bind=None, passwd=None, size=10, retry_max=3,
+    def __init__(self, uri, bind=None, passwd=None, pool_size=10, retry_max=3,
                  retry_delay=.1, use_tls=False, single_box=False, timeout=-1,
                  connector_cls=StateConnector, use_pool=False):
         self._pool = []
-        self.size = size
+        self.size = pool_size
         self.retry_max = retry_max
         self.retry_delay = retry_delay
         self.uri = uri
