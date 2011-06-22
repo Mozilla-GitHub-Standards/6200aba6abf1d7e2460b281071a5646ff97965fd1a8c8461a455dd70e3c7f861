@@ -244,7 +244,8 @@ class ConnectionManager(object):
                 time.sleep(0.1)
                 # removing the first inactive connector
                 with self._pool_lock:
-                    for index, conn_ in enumerate(list(self._pool)):
+                    reversed_list = reversed(list(enumerate(list(self._pool))))
+                    for index, conn_ in reversed_list:
                         if not conn_.active:
                             self._pool.pop(index)
                             break
