@@ -46,11 +46,6 @@ class DummyAuth(object):
     def __init__(self, **kw):
         self._users = {}
 
-    @classmethod
-    def get_name(self):
-        """Returns the name of the authentication backend"""
-        return 'dummy'
-
     def create_user(self, user_name, password, email):
         """Creates a user"""
         if user_name in self._users:

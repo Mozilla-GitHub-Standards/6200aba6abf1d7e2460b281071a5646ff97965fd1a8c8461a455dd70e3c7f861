@@ -114,50 +114,35 @@ class PluginRegistry(object):
     plugin_type = ''
 
     @classmethod
+    def _get_backend_class(cls, name):
+        try:
+            klass = _resolve_name(name)
+        except ImportError:
+            msg = ('Unknown fully qualified name for the backend: %r') % name
+            raise KeyError(msg)
+
+        # let's register it
+        cls.register(klass)
+        return klass
+
+    @classmethod
     def get_from_config(cls, config):
         """Get a plugin from a config file."""
         params = filter_params(cls.plugin_type, config)
-        backend_name = params['backend']
 
-        # trying to load a direct backend name
-        backend = None
-        for entry in cls._abc_registry:
-            if entry.get_name() == backend_name:
-                backend = entry
-                break
-
-        if backend is None:
-            # its a code location maybe, let's load it
-            try:
-                backend = _resolve_name(backend_name)
-            except ImportError:
-                msg = ('Unknown fully qualified name for the backend:'
-                       ' %r') % backend_name
-                raise KeyError(msg)
-
-            # let's register it on-the-fly
-            cls.register(backend)
-
-        if backend is None:
-            raise KeyError('No plugin registered for "%s"' % backend_name)
+        # loading the backend
+        klass = cls._get_backend_class(params['backend'])
 
         del params['backend']
 
         # now returning an instance
-        return backend(**params)
+        return klass(**params)
 
     @classmethod
     def get(cls, name, **params):
-        """Instanciates a plugin given its name"""
-        for entry in cls._abc_registry:
-            if entry.get_name() != name:
-                continue
-            try:
-                return entry(**params)
-            except Exception, e:
-                msg = 'could not load "%s" %s' % (name, str(e))
-                raise TypeError(msg)
-        raise KeyError(name)
+        """Instanciates a plugin given its fully qualified name."""
+        klass = cls._get_backend_class(name)
+        return klass(**params)
 
     @classmethod
     def __subclasshook__(cls, klass):
@@ -168,7 +153,3 @@ class PluginRegistry(object):
         if klass not in cls._abc_registry:
             cls._abc_registry.add(klass)
         return True
-
-    @abc.abstractmethod
-    def get_name(self):
-        """Returns the name of the plugin"""

@@ -135,11 +135,6 @@ class LDAPAuth(ResetCodeManager):
     def _purge_conn(self, bind, passwd=None):
         self.conn.purge(bind, passwd=None)
 
-    @classmethod
-    def get_name(self):
-        """Returns the name of the authentication backend"""
-        return 'ldap'
-
     def _get_dn_by_filter(self, filter):
         dn = self.users_root
         scope = ldap.SCOPE_SUBTREE

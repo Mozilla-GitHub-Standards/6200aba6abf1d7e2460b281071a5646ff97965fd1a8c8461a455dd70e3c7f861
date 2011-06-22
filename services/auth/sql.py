@@ -101,11 +101,6 @@ class SQLAuth(ResetCodeManager):
         self.sqluri = sqluri
         ResetCodeManager.__init__(self, engine, create_tables=create_tables)
 
-    @classmethod
-    def get_name(self):
-        """Returns the name of the authentication backend"""
-        return 'sql'
-
     def _get_username(self, uid):
         """Returns the id for a user name"""
         user = safe_execute(self._engine, _USER_NAME, uid=uid).fetchone()

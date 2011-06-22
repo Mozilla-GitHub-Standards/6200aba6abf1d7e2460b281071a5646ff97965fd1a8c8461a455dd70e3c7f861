@@ -80,7 +80,7 @@ class TestBaseApp(unittest.TestCase):
         controllers = {'foo': _Foo}
         config = {'host:here.one.two': 1,
                   'one.two': 2,
-                  'auth.backend': 'dummy'}
+                  'auth.backend': 'services.auth.dummy.DummyAuth'}
         self.app = SyncServerApp(urls, controllers, config)
 
     def test_host_config(self):
@@ -110,7 +110,7 @@ class TestBaseApp(unittest.TestCase):
 
     def test_retry_after(self):
         config = {'global.retry_after': 60,
-                  'auth.backend': 'dummy'}
+                  'auth.backend': 'services.auth.dummy.DummyAuth'}
         urls = [('GET', '/boom', 'foo', 'boom')]
         controllers = {'foo': _Foo}
         app = SyncServerApp(urls, controllers, config)
@@ -126,7 +126,7 @@ class TestBaseApp(unittest.TestCase):
 
         config = {'global.heartbeat_page': '__heartbeat__',
                   'global.debug_page': '__debug__',
-                  'auth.backend': 'dummy'}
+                  'auth.backend': 'services.auth.dummy.DummyAuth'}
         urls = []
         controllers = {}
 
@@ -190,7 +190,7 @@ class TestBaseApp(unittest.TestCase):
         try:
             config = {'global.heartbeat_page': '__heartbeat__',
                     'global.debug_page': '__debug__',
-                    'auth.backend': 'dummy'}
+                    'auth.backend': 'services.auth.dummy.DummyAuth'}
             urls = []
             controllers = {}
             app = SyncServerApp(urls, controllers, config)

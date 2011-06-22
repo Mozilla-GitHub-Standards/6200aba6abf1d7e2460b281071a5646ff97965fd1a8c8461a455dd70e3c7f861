@@ -42,31 +42,27 @@ class Dummy(object):
         self.foo = foo
 
 
+class Buggy(object):
+    def __init__(self):
+        raise IOError('boom')
+
+
+class Cool(object):
+    pass
+
+
 class TestPlugin(unittest.TestCase):
 
     def test_get(self):
         self.assertRaises(KeyError, PluginRegistry.get, 'xxx')
 
-        class Buggy(object):
-
-            def __init__(self):
-                raise IOError('boom')
-
-            @classmethod
-            def get_name(cls):
-                return 'buggy'
-
         PluginRegistry.register(Buggy)
-        self.assertRaises(TypeError, PluginRegistry.get, 'buggy')
+        self.assertRaises(IOError, PluginRegistry.get,
+                    'services.tests.test_pluginreg.Buggy')
 
-        class Cool(object):
-
-            @classmethod
-            def get_name(cls):
-                return 'cool'
-
+        name = 'services.tests.test_pluginreg.Cool'
         PluginRegistry.register(Cool)
-        p = PluginRegistry.get('cool')
+        p = PluginRegistry.get(name)
         self.assertTrue(isinstance(p, Cool))
 
     def test_load_direct(self):

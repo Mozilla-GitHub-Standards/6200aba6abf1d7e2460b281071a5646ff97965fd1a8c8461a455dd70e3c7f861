@@ -66,7 +66,7 @@ class TestSQLAuth(unittest.TestCase):
         self.auth._engine.execute('delete from users')
 
     def test_authenticate_user(self):
-        if self.auth.get_name() != 'sql':
+        if not isinstance(self.auth, SQLAuth):
             # not supported yet
             return
 
@@ -75,7 +75,7 @@ class TestSQLAuth(unittest.TestCase):
         self.assertEquals(user_id, self.user_id)
 
     def test_reset_code(self):
-        if self.auth.get_name() != 'sql':
+        if not isinstance(self.auth, SQLAuth):
             # not supported yet
             return
 
@@ -101,7 +101,7 @@ class TestSQLAuth(unittest.TestCase):
         self.assertFalse(self.auth.verify_reset_code(self.user_id, code))
 
     def test_status(self):
-        if self.auth.get_name() != 'sql':
+        if not isinstance(self.auth, SQLAuth):
             # not supported yet
             return
         # people with status '0' are disabled

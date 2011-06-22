@@ -95,11 +95,6 @@ class MozillaAuth(LDAPAuth):
                 return {}
         return {}
 
-    @classmethod
-    def get_name(self):
-        """Returns the name of the authentication backend"""
-        return 'mozilla'
-
     def generate_url(self, username, additional_path=None):
         path = "%s/%s" % (self.sreg_path, username)
         if additional_path:

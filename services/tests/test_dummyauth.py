@@ -44,7 +44,7 @@ ServicesAuth.register(DummyAuth)
 class TestDummyAuth(unittest.TestCase):
 
     def setUp(self):
-        self.auth = ServicesAuth.get('dummy')
+        self.auth = ServicesAuth.get('services.auth.dummy.DummyAuth')
 
     def test_authenticate_user(self):
         tarek_id = self.auth.authenticate_user('tarek', 'tarek')

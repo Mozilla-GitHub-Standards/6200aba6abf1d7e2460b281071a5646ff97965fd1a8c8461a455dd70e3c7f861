@@ -92,11 +92,6 @@ class MozillaAuth(LDAPAuth):
 
         return status, body
 
-    @classmethod
-    def get_name(self):
-        """Returns the name of the authentication backend"""
-        return 'mozilla_sreg'
-
     def create_user(self, username, password, email):
         """Creates a user. Returns True on success."""
         payload = {'password': password, 'email': email}
