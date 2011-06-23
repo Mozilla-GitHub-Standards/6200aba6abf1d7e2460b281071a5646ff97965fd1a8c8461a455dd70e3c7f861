@@ -83,7 +83,7 @@ class SQLAuth(ResetCodeManager):
     """SQL authentication."""
 
     def __init__(self, sqluri=_SQLURI, pool_size=20, pool_recycle=60,
-                 create_tables=True, **kw):
+                 create_tables=False, **kw):
         sqlkw = {'pool_size': int(pool_size),
                  'pool_recycle': int(pool_recycle),
                  'logging_name': 'weaveserver'}
