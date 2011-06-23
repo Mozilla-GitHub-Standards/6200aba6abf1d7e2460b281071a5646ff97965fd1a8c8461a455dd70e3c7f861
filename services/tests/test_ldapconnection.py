@@ -40,6 +40,8 @@ try:
 except ImportError:
     LDAP = False
 
+from services.util import BackendError
+
 if LDAP:
     from services.auth.ldapconnection import ConnectionManager
     from services.auth.ldapconnection import StateConnector
@@ -51,6 +53,10 @@ def _bind(self, who='', cred='', **kw):
     self.who = who
     self.cred = cred
     return 1
+
+
+def _bind_fails(self, who='', cred='', **kw):
+    raise ldap.LDAPError('LDAP connection invalid')
 
 
 class TestLDAPConnection(unittest.TestCase):
@@ -119,3 +125,23 @@ class TestLDAPConnection(unittest.TestCase):
         # every connector is marked inactive
         self.assertFalse(cm._pool[0].active)
         self.assertFalse(cm._pool[1].active)
+
+    def test_simple_bind_fails(self):
+        if not LDAP:
+            return
+
+        # the binding fails with an LDAPError
+        StateConnector.simple_bind_s = _bind_fails
+        uri = ''
+        dn = 'uid=adminuser,ou=logins,dc=mozilla'
+        passwd = 'adminuser'
+        cm = ConnectionManager(uri, dn, passwd, use_pool=True, size=2)
+        self.assertEqual(len(cm), 0)
+
+        try:
+            with cm.connection('dn', 'pass'):
+                pass
+        except BackendError:
+            pass
+        else:
+            raise AssertionError()

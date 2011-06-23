@@ -41,7 +41,6 @@ from threading import RLock
 
 from ldap.ldapobject import ReconnectLDAPObject
 import ldap
-
 from services.util import BackendError, BackendTimeoutError
 
 
@@ -123,7 +122,12 @@ class ConnectionManager(object):
             # no connector was available, let's rebind the latest inactive one
             if len(inactives) > 0:
                 conn = inactives[0]
-                self._bind(conn, bind, passwd)
+                try:
+                    self._bind(conn, bind, passwd)
+                except:
+                    self._pool.remove(conn)
+                    raise
+
                 return conn
 
         # There are no connector that match
@@ -142,19 +146,22 @@ class ConnectionManager(object):
                 try:
                     conn.simple_bind_s(bind, passwd)
                 except ldap.TIMEOUT, e:
+                    # timed out, we're getting out
                     raise BackendTimeoutError(str(e))
-                except (ldap.SERVER_DOWN, ldap.OTHER), e:
-                    try:
-                        conn.unbind_ext_s()
-                    except ldap.LDAPError:
-                        # invalid connection
-                        pass
+                except ldap.SERVER_DOWN:
+                    # the server seems down, we can retry
                     time.sleep(self.retry_delay)
                     tries += 1
+                except (ldap.INVALID_CREDENTIALS, ldap.INVALID_DN_SYNTAX):
+                    raise
+                except ldap.LDAPError, e:
+                    # invalid connection, or unknown error should die
+                    raise BackendError(str(e))
                 else:
                     # we're good
                     connected = True
 
+            # we failed
             if not connected:
                 raise BackendError(str(e))
 
