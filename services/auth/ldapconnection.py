@@ -105,53 +105,35 @@ class ConnectionManager(object):
 
     def _match(self, bind, passwd):
         passwd = passwd.encode('utf8')
-
         with self._pool_lock:
-            for conn in list(self._pool):
+            inactives = []
+
+            for conn in reversed(self._pool):
+                # already in usage
                 if conn.active:
                     continue
 
-                # any connection w/ no creds matches
-                if conn.who is None:
+                # we found a connector for this bind
+                if conn.who == bind and conn.cred == passwd:
                     conn.active = True
                     return conn
 
-                # we found a connector for this bind
-                if conn.who == bind:
-                    # same passwd, we're good
-                    if conn.cred == passwd:
-                        conn.active = True
-                        return conn
+                inactives.append(conn)
 
-                    # different password, let's discard it
-                    try:
-                        conn.unbind_ext_s()
-                    except ldap.LDAPError:
-                        # avoid error on invalid state
-                        pass
+            # no connector was available, let's rebind the latest inactive one
+            if len(inactives) > 0:
+                conn = inactives[0]
+                self._bind(conn, bind, passwd)
+                return conn
 
-                    # invalid connector, to be discarded
-                    self._pool.remove(conn)
-                    continue
-
+        # There are no connector that match
         return None
 
-    def _create_connector(self, bind, passwd):
-        """Creates a connector, binds it, and returns it
-
-        Args:
-            - bind: login
-            - passwd: password
-        """
-        passwd = passwd.encode('utf8')
-        conn = self.connector_cls(self.uri, retry_max=self.retry_max,
-                                  retry_delay=self.retry_delay)
-        conn.timeout = self.timeout
-
+    def _bind(self, conn, bind, passwd):
+        # let's bind
         if self.use_tls:
             conn.start_tls_s()
 
-        # let's bind
         if bind is not None:
             tries = 0
             connected = False
@@ -177,6 +159,19 @@ class ConnectionManager(object):
                 raise BackendError(str(e))
 
         conn.active = True
+
+    def _create_connector(self, bind, passwd):
+        """Creates a connector, binds it, and returns it
+
+        Args:
+            - bind: login
+            - passwd: password
+        """
+        passwd = passwd.encode('utf8')
+        conn = self.connector_cls(self.uri, retry_max=self.retry_max,
+                                  retry_delay=self.retry_delay)
+        conn.timeout = self.timeout
+        self._bind(conn, bind, passwd)
         return conn
 
     def _get_connection(self, bind=None, passwd=None):
@@ -242,9 +237,10 @@ class ConnectionManager(object):
             except MaxConnectionReachedError:
                 tries += 1
                 time.sleep(0.1)
-                # removing the first inactive connector
+
+                # removing the first inactive connector going backward
                 with self._pool_lock:
-                    reversed_list = reversed(list(enumerate(list(self._pool))))
+                    reversed_list = reversed(list(enumerate(self._pool)))
                     for index, conn_ in reversed_list:
                         if not conn_.active:
                             self._pool.pop(index)
@@ -278,6 +274,7 @@ class ConnectionManager(object):
             for conn in list(self._pool):
                 if conn.who != bind:
                     continue
+
                 if passwd is not None and conn.cred == passwd:
                     continue
                 # let's drop it
