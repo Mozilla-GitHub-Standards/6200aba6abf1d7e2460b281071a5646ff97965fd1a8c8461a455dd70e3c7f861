@@ -40,6 +40,7 @@ from logging.config import fileConfig
 import smtplib
 from email import message_from_string
 
+from services.config import Config
 from services.auth import ServicesAuth
 from services.util import convert_config
 from services.pluginreg import load_and_configure
@@ -73,10 +74,7 @@ class TestEnv(object):
         if cfg.has_section('loggers'):
             fileConfig(ini_file)
 
-        here = {'here': os.path.dirname(os.path.realpath(ini_file))}
-        config = dict([(key, value % here) for key, value in
-                      cfg.items('DEFAULT') + cfg.items('app:main')])
-        self.config = convert_config(config)
+        self.config = Config(ini_file).get_map()
 
     def add_class(self, section, cls_param="backend"):
         """Takes the name of a config section and uses it to instantiate a
