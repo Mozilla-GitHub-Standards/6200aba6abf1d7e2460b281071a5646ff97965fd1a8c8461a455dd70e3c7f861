@@ -38,5 +38,5 @@ from setuptools import setup, find_packages
 install_requires = ['SQLALchemy<=0.6.99', 'Paste', 'PasteDeploy', 'WebOb',
                     'Routes', 'simplejson', 'cef', 'wsgiproxy']
 
-setup(name='Services', version='1.8', packages=find_packages(),
+setup(name='Services', version='2.0', packages=find_packages(),
       install_requires=install_requires)
