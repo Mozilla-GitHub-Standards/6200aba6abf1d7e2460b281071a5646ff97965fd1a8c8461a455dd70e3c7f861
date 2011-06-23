@@ -74,6 +74,9 @@ def load_and_configure(config, section=None, cls_param='backend'):
     """given a config file, extracts the class name, imports the class and
     returns an instance configured with the rest of the config file
 
+    Can be used to load up classes that don't inherit from PluginRegistry,
+    but will not do any validation that it implements required methods.
+
     Args:
         config: a configuration object
         section: the section of the config object to use in configuring.
@@ -126,17 +129,14 @@ class PluginRegistry(object):
         return klass
 
     @classmethod
-    def get_from_config(cls, config):
+    def get_from_config(cls, config, section=None, cls_param='backend'):
         """Get a plugin from a config file."""
-        params = filter_params(cls.plugin_type, config)
-
-        # loading the backend
-        klass = cls._get_backend_class(params['backend'])
-
-        del params['backend']
-
-        # now returning an instance
-        return klass(**params)
+        params = config
+        if section:
+            params = filter_params(section, params)
+        backend_name = params[cls_param]
+        del params[cls_param]
+        return cls.get(backend_name, **params)
 
     @classmethod
     def get(cls, name, **params):

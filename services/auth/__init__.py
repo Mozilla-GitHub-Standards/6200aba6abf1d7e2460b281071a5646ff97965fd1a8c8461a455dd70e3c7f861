@@ -230,32 +230,4 @@ def get_auth(config):
     - other keys that starts with "auth." are passed to the backend
       constructor -- with the prefix stripped.
     """
-    # pre-loading auth plugins services provides to ease configuration
-    try:
-        from services.auth.sql import SQLAuth
-        ServicesAuth.register(SQLAuth)
-    except ImportError:
-        pass
-
-    try:
-        from services.auth.ldapsql import LDAPAuth
-        ServicesAuth.register(LDAPAuth)
-    except ImportError:
-        pass
-
-    try:
-        from services.auth.mozilla import MozillaAuth
-        ServicesAuth.register(MozillaAuth)
-    except ImportError:
-        pass
-
-    try:
-        from services.auth.mozilla_sreg import MozillaSRegAuth
-        ServicesAuth.register(MozillaSRegAuth)
-    except ImportError:
-        pass
-
-    from services.auth.dummy import DummyAuth
-    ServicesAuth.register(DummyAuth)
-
-    return ServicesAuth.get_from_config(config)
+    return ServicesAuth.get_from_config(config, 'auth')
