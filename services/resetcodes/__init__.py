@@ -60,7 +60,7 @@ class ResetCode(object):
     """Base Class for the reset code APIs."""
 
     def _get_user_id(self, user):
-        user_id = user.get("userId", None)
+        user_id = user.get("userid", None)
         if not user_id:
             raise NoUserIDError()
         return user_id
@@ -94,7 +94,7 @@ class ResetCode(object):
         """Returns the a reset code for user.
 
         Args:
-            user: the user object. Must have a value for user[userId]. Some
+            user: the user object. Must have a value for user[userid]. Some
                 implementations may require user[userName]
             overwrite: if set to False, returns the current key if already
                 generated
@@ -109,7 +109,7 @@ class ResetCode(object):
         Validates that the code provided exists and is valid for the user.
 
         Args:
-            user: the user object. Must have a value for user[userId]. Some
+            user: the user object. Must have a value for user[userid]. Some
                 implementations may require user[userName]
             code: the code to be validated
 
@@ -123,7 +123,7 @@ class ResetCode(object):
         Removes a code associated with the user
 
         Args:
-            user: the user object. Must have a value for user[userId]. Some
+            user: the user object. Must have a value for user[userid]. Some
                 implementations may require user[userName]
 
         Returns:

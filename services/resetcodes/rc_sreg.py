@@ -60,7 +60,7 @@ class ResetCodeSreg(ResetCode):
         """Returns the a reset code for user.
 
         Args:
-            user: the user object. Must have a value for user[userId]
+            user: the user object. Must have a value for user[userid]
             overwrite: if set to False, returns the current key if already
                 generated
 
