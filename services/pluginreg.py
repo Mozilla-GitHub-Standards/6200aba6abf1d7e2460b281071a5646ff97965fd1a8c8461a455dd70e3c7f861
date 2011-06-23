@@ -129,14 +129,13 @@ class PluginRegistry(object):
         return klass
 
     @classmethod
-    def get_from_config(cls, config, section=None, cls_param='backend'):
+    def get_from_config(cls, config, section=None, cls_name_field='backend'):
         """Get a plugin from a config file."""
-        params = config
         if section:
-            params = filter_params(section, params)
-        backend_name = params[cls_param]
-        del params[cls_param]
-        return cls.get(backend_name, **params)
+            config = filter_params(section, config)
+        backend_name = config[cls_name_field]
+        del config[cls_name_field]
+        return cls.get(backend_name, **config)
 
     @classmethod
     def get(cls, name, **params):
