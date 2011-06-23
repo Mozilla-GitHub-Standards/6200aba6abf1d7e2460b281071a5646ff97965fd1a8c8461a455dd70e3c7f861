@@ -68,7 +68,7 @@ class ResetCodeSreg(ResetCode):
             The reset code, or None if there's a problem.
         """
 
-        username = user.get('userName', None)
+        username = user.get('username', None)
         if not username:
             raise NoUserIDError()
 
