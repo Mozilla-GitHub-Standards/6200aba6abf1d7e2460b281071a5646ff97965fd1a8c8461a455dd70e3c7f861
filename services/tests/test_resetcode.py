@@ -50,7 +50,7 @@ class TestResetCodeManager(unittest.TestCase):
 
     def _tests(self, mgr):
         user = User()
-        user['userId'] = 1
+        user['userid'] = 1
 
         code = mgr.generate_reset_code(user)
         self.assertEqual(code, mgr.generate_reset_code(user))
@@ -114,8 +114,8 @@ class TestResetCodeManager(unittest.TestCase):
 
         mgr = load_and_configure(config)
         user = User()
-        user['userId'] = 1
-        user['userName'] = 'telliott'
+        user['userid'] = 1
+        user['username'] = 'telliott'
 
         wsgi_intercept.add_wsgi_intercept('localhost', 80, _fake_response)
         self.assertRaises(AlreadySentError, mgr.generate_reset_code, user)
