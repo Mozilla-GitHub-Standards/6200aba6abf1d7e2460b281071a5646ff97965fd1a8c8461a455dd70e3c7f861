@@ -1,3 +1,14 @@
+2.1 - 2011-06-24
+================
+
+Impacts:
+
+- Ops
+
+Relevant Changes:
+
+Bug 662859 - Adding node checking
+
 1.7 - 2011-06-14
 ================
 
