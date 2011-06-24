@@ -92,7 +92,7 @@ class LDAPAuth(ResetCodeManager):
                  reset_on_return=True, single_box=False, ldap_timeout=-1,
                  nodes_scheme='https', check_account_state=True,
                  create_tables=False, ldap_pool_size=10, ldap_use_pool=False,
-                 connector_cls=StateConnector, **kw):
+                 connector_cls=StateConnector, check_node=False, **kw):
         self.check_account_state = check_account_state
         self.ldapuri = ldapuri
         self.sqluri = sqluri
@@ -127,6 +127,7 @@ class LDAPAuth(ResetCodeManager):
         else:
             engine = None
 
+        self.check_node = check_node
         ResetCodeManager.__init__(self, engine, create_tables=create_tables)
 
     def _conn(self, bind=None, passwd=None):
@@ -242,7 +243,7 @@ class LDAPAuth(ResetCodeManager):
 
         return res == ldap.RES_ADD
 
-    def authenticate_user(self, user_name, password):
+    def authenticate_user(self, user_name, password, host=None):
         """Authenticates a user given a user_name and password.
 
         Returns the user id in case of success. Returns None otherwise."""
@@ -254,6 +255,8 @@ class LDAPAuth(ResetCodeManager):
         attrs = ['uidNumber']
         if self.check_account_state:
             attrs.append('account-enabled')
+        if self.check_node:
+            attrs.append('primaryNode')
 
         try:
             with self._conn(dn, password) as conn:
@@ -273,7 +276,22 @@ class LDAPAuth(ResetCodeManager):
         if self.check_account_state and user['account-enabled'][0] != 'Yes':
             return None
 
+        # XXXto be removed with a proper fix see #662859
+        if self.check_node and host:
+            wanted = self._get_node(user['primaryNode'])
+            if wanted != host:
+                return None
+
         return user['uidNumber'][0]
+
+    def _get_node(self, primary_node):
+        for node in primary_node:
+            node = node[len('weave:'):]
+            if node == '':
+                continue
+            # we want to return the URL
+            return node.strip()
+        return None
 
     def get_user_info(self, user_id):
         """Returns user info
@@ -457,10 +475,8 @@ class LDAPAuth(ResetCodeManager):
 
         # this makes the assumption that weave: is the only
         # product. see https://bugzilla.mozilla.org/show_bug.cgi?id=655147
-        for node in res['primaryNode']:
-            node = node[len('weave:'):]
-            if node == '':
-                continue
+        node = self._get_node(res['primaryNode'])
+        if node is not None:
             # we want to return the URL
             return '%s://%s/' % (self.nodes_scheme, node)
 

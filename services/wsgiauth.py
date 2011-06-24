@@ -121,7 +121,13 @@ class Authentication(object):
             # the authenticate_user API takes a unicode UTF-8 for the password
             password = password.decode('utf8')
 
-            user_id = self.backend.authenticate_user(user_name, password)
+            # XXX to be removed once we get the proper fix see bug #662859
+            if hasattr(self.backend, 'check_node') and self.backend.check_node:
+                user_id = self.backend.authenticate_user(user_name, password,
+                                                     environ.get('HTTP_HOST'))
+            else:
+                user_id = self.backend.authenticate_user(user_name, password)
+
             if user_id is None:
                 err = 'Authentication Failed for Backend service ' + user_name
                 if remote_user_original is not None and \
