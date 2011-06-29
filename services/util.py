@@ -61,7 +61,7 @@ import time
 from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, TimeoutError
 
 from services.config import Config, convert
 from services import logger
@@ -625,10 +625,10 @@ def safe_execute(engine, *args, **kwargs):
     """
     try:
         return engine.execute(*args, **kwargs)
-    except OperationalError:
+    except (OperationalError, TimeoutError), exc:
         err = traceback.format_exc()
         logger.error(err)
-        raise BackendError()
+        raise BackendError(str(exc))
 
 
 def get_source_ip(environ):
