@@ -56,7 +56,27 @@ class AuthTool(DummyAuth):
         return 1
 
 
+class ColonPasswordAuthTool(DummyAuth):
+    
+    def authenticate_user(self, *args):
+        if args[0] == 'user' and args[1] == 'pass:word:':
+            return 1
+        return None
+
+
 class AuthenticationTestCase(unittest.TestCase):
+    
+    def test_password_colons(self):
+        # Passwords that contain colons are passed through to the
+        # authentication function.
+        config = {'auth.backend': 'services.tests.test_wsgiauth.ColonPasswordAuthTool'}
+        auth = Authentication(config)
+        token = 'Basic ' + base64.b64encode('user:pass:word:')
+        req = Request('/1.0/tarek/info/collections',
+                {'HTTP_AUTHORIZATION': token})
+        res = auth.authenticate_user(req, {})
+        self.assertEquals(res, 1)
+        
 
     def test_authenticate_user(self):
 
