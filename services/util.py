@@ -104,7 +104,6 @@ def html_response(data, **kw):
 
 def newlines_response(lines, **kw):
     """Returns a Response object containing a newlines output."""
-
     def _convert(line):
         line = json.dumps(line, use_decimal=True).replace('\n', '\u000a')
         return '%s\n' % line
