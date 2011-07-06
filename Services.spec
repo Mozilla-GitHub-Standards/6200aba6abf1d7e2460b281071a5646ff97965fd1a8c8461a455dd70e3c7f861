@@ -2,7 +2,7 @@
 %define pythonname Services
 %define version 2.4
 %define unmangled_version 2.4
-%define release 1
+%define release 3
 
 Summary: Services core tools
 Name: %{name}

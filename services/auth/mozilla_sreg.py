@@ -43,7 +43,7 @@ from services.auth.ldapsql import LDAPAuth
 from services import logger
 from services.auth.ldapconnection import StateConnector
 from services.auth import NoEmailError, InvalidCodeError
-from services.respcodes import ERROR_NO_EMAIL_ADRESS, ERROR_INVALID_RESET_CODE
+from services.respcodes import ERROR_NO_EMAIL_ADDRESS, ERROR_INVALID_RESET_CODE
 
 
 class MozillaAuth(LDAPAuth):
@@ -121,7 +121,7 @@ class MozillaAuth(LDAPAuth):
             return body == 0
 
         if status == 400:
-            if body == ERROR_NO_EMAIL_ADRESS:
+            if body == ERROR_NO_EMAIL_ADDRESS:
                 raise NoEmailError()
 
         raise BackendError()
