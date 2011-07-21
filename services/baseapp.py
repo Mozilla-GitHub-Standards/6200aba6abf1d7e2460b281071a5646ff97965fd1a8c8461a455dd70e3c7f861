@@ -38,6 +38,9 @@ Application entry point.
 """
 import traceback
 import simplejson as json
+import sys
+import signal
+from time import sleep
 
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
@@ -45,7 +48,7 @@ from paste.exceptions.errormiddleware import ErrorMiddleware
 from routes import Mapper
 
 from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPBadRequest
+from webob.exc import HTTPNotFound, HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
 from services.util import (convert_config, CatchErrorMiddleware, round_time,
@@ -53,7 +56,7 @@ from services.util import (convert_config, CatchErrorMiddleware, round_time,
 from services import logger
 from services.wsgiauth import Authentication
 from services.controllers import StandardController
-from services.events import REQUEST_STARTS, REQUEST_ENDS, notify
+from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
 from services.user import User
 
 
@@ -113,6 +116,33 @@ class SyncServerApp(object):
         self.standard_controller._debug_server = self._debug_server
         self.standard_controller._check_server = self._check_server
 
+        # hooking callbacks when the app shuts down
+        self.killing = self.shutting = False
+        self.graceful_shutdown_interval = self.config.get(
+                                      'global.graceful_shutdown_interval', 1.)
+        self.hard_shutdown_interval = self.config.get(
+                                          'global.hard_shutdown_interval', 1.)
+        signal.signal(signal.SIGTERM, self._sigterm)
+        signal.signal(signal.SIGINT, self._sigterm)
+
+    def _sigterm(self, signal, frame):
+        self.shutting = True
+
+        # wait for a bit
+        sleep(self.graceful_shutdown_interval)
+
+        # no more queries
+        self.killing = True
+
+        # wait for a bit
+        sleep(self.hard_shutdown_interval)
+
+        # now we can notify the end -- so pending stuff can be cleaned up
+        notify(APP_ENDS)
+
+        # bye-bye
+        sys.exit(0)
+
     def _before_call(self, request):
         return {}
 
@@ -170,6 +200,10 @@ class SyncServerApp(object):
     @wsgify
     @_notified
     def __call__(self, request):
+        # the app is being killed, no more requests please
+        if self.killing:
+            raise HTTPServiceUnavailable()
+
         if request.method in ('HEAD',):
             raise HTTPBadRequest('"%s" not supported' % request.method)
 
@@ -187,9 +221,15 @@ class SyncServerApp(object):
         if url != '':
             request.environ['PATH_INFO'] = request.path_info = url
 
-        if (self.heartbeat_page is not None and
-            url == '/%s' % self.heartbeat_page):
-            return self._heartbeat(request)
+        # the heartbeat page is called
+        if url == '/%s' % self.heartbeat_page:
+            # the app is shutting down, we want to return a 503
+            if self.shutting:
+                raise HTTPServiceUnavailable()
+
+            # otherwise we do call the heartbeat page
+            if self.heartbeat_page is not None:
+                return self._heartbeat(request)
 
         if self.debug_page is not None and url == '/%s' % self.debug_page:
             return self._debug(request)

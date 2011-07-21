@@ -35,11 +35,13 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 import base64
+import threading
+from time import sleep
 
 from services.baseapp import SyncServerApp
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
-                             unsubscribe)
+                             unsubscribe, APP_ENDS)
 from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable
 
 
@@ -211,6 +213,64 @@ class TestBaseApp(unittest.TestCase):
             self.assertTrue('application error: crash id' in str(err))
         else:
             raise AssertionError('Should raise')
+
+    def test_graceful_shutdown(self):
+
+        pings = []
+
+        def end():
+            pings.append('app ends')
+
+        subscribe(APP_ENDS, end)
+        try:
+            config = {'global.heartbeat_page': '__heartbeat__',
+                      'global.debug_page': '__debug__',
+                      'auth.backend': 'services.auth.dummy.DummyAuth',
+                      'global.graceful_shutdown_interval': 1,
+                      'global.hard_shutdown_interval': 1}
+
+            urls = []
+            controllers = {}
+            app = SyncServerApp(urls, controllers, config)
+
+            # heartbeat should work
+            request = _Request('GET', '/__heartbeat__', 'localhost')
+            app(request)
+
+            # let's "kill it" in a thread
+            class Killer(threading.Thread):
+                def __init__(self, app):
+                    threading.Thread.__init__(self)
+                    self.app = app
+
+                def run(self):
+                    self.app._sigterm(None, None)
+
+            killer = Killer(app)
+            killer.start()
+
+            # in the meantime, /heartbeat should return a 503
+            request = _Request('GET', '/__heartbeat__', 'localhost')
+            self.assertRaises(HTTPServiceUnavailable, app, request)
+
+            # but regular requests should still work
+            request = _Request('GET', '/', 'localhost')
+            app(request)
+
+            # sleeping
+            sleep(1.)
+
+            # now / should 503 too
+            request = _Request('GET', '/', 'localhost')
+            self.assertRaises(HTTPServiceUnavailable, app, request)
+
+            killer.join()
+
+        finally:
+            unsubscribe(APP_ENDS, end)
+
+        # and we should have had a event ping
+        self.assertEquals(pings, ['app ends'])
 
 
 def test_suite():

@@ -64,3 +64,7 @@ REQUEST_STARTS = 'server-core.request-starts'
 # called when a response leaves the application.
 # The callable is called with the response object
 REQUEST_ENDS = 'server-core.request-ends'
+
+# Called when the app shuts down (SIGTERM/SIGINT)
+# the callable is called with no option
+APP_ENDS = 'server-code.app.ends'
