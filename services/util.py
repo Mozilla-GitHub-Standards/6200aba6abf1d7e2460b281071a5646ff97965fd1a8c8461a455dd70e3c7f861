@@ -649,3 +649,9 @@ def create_hash(data):
     rand = ''.join([randchar() for x in range(10)])
     data += rand
     return md5(data + rand).hexdigest()
+
+def extract_node(node):
+    """Takes a raw node result and splits it into a node and a dictionary
+    of any additional key-value pairs specified"""
+    vals = node.split('<')
+    return vals[0], dict([val.split('=', 1) for val in vals[1:]])
