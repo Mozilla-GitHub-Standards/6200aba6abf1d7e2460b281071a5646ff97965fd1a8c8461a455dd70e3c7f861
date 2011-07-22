@@ -332,6 +332,8 @@ def valid_password(user_name, password):
 
     if len(password) < 8:
         return False
+
+    user_name = user_name.encode('utf8')
     return user_name.lower().strip() != password.lower().strip()
 
 
@@ -649,6 +651,7 @@ def create_hash(data):
     rand = ''.join([randchar() for x in range(10)])
     data += rand
     return md5(data + rand).hexdigest()
+
 
 def extract_node(node):
     """Takes a raw node result and splits it into a node and a dictionary
