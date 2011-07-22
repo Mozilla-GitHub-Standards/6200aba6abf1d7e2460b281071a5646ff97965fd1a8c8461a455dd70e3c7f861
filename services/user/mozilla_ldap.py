@@ -87,7 +87,7 @@ class LDAPUser(object):
             return False
 
         user_id = self._get_next_user_id()
-        password_hash = ssha(password.encode('utf8'))
+        password_hash = ssha(password)
         key = '%s%s' % (random.randint(0, 9999999), user_name)
         key = sha1(key).hexdigest()
 
@@ -131,6 +131,9 @@ class LDAPUser(object):
         """Authenticates a user given a user_name and password.
 
         Returns the user id in case of success. Returns None otherwise."""
+
+        if password is None or password == '':
+            return None
 
         if not user.get('username'):
             #cannot authenticate without a username
@@ -294,6 +297,9 @@ class LDAPUser(object):
         Returns:
             True if the change was successful, False otherwise
         """
+        if ldap_user is not None and ldap_password is None:
+            return False
+
         dn = self._get_dn(user)
         if dn is None:
             return False

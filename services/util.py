@@ -325,6 +325,9 @@ def valid_password(user_name, password):
     Returns:
         True or False
     """
+    if password is None:
+        return False
+
     password = password.encode('utf8')
 
     if len(password) < 8:

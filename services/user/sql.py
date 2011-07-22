@@ -123,7 +123,7 @@ class SQLUser(object):
 
     def create_user(self, username, password, email):
         """Creates a user. Returns True on success."""
-        password_hash = ssha256(password.encode('utf8'))
+        password_hash = ssha256(password)
         query = insert(users).values(username=username, mail=email,
                                      password=password_hash,
                                      accountStatus=1,
@@ -170,7 +170,7 @@ class SQLUser(object):
             # user is disabled
             return None
 
-        if validate_password(password.encode('utf8'), res.password):
+        if validate_password(password, res.password):
             user['userid'] = res.userid
             for attr in attrs:
                 user[attr] = getattr(res, attr)
