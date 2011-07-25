@@ -174,9 +174,10 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(validate_password('two', two))
 
     def test_valid_password(self):
-        self.assertFalse(valid_password('tarek', 'xx'))
-        self.assertFalse(valid_password('t' * 8, 't' * 8))
-        self.assertTrue(valid_password('tarek', 't' * 8))
+        self.assertFalse(valid_password(u'tarek', u'xx'))
+        self.assertFalse(valid_password(u't' * 8, u't' * 8))
+        self.assertTrue(valid_password(u'tarek', u't' * 8))
+        self.assertFalse(valid_password(u'café' * 3, u'café' * 3))
 
     def test_response_conversions(self):
         data = {'some': 'data'}
@@ -432,8 +433,6 @@ class TestUtil(unittest.TestCase):
         str1 = "basenode"
         str2 = "node<a=1<b=2"
         str3 = "node<a"
-
         self.assertEqual(extract_node(str1), ('basenode', {}))
-        self.assertEqual(extract_node(str2), ('node', {'a':'1', 'b':'2'}))
+        self.assertEqual(extract_node(str2), ('node', {'a': '1', 'b': '2'}))
         self.assertRaises(ValueError, extract_node, str3)
-

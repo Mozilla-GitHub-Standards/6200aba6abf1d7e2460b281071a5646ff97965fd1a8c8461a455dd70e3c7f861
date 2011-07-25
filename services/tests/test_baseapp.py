@@ -248,6 +248,7 @@ class TestBaseApp(unittest.TestCase):
 
             killer = Killer(app)
             killer.start()
+            sleep(0.2)
 
             # in the meantime, /heartbeat should return a 503
             request = _Request('GET', '/__heartbeat__', 'localhost')
