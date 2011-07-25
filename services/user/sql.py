@@ -53,7 +53,7 @@ tables = []
 
 
 class Users(_Base):
-    __tablename__ = 'users'
+    __tablename__ = 'user'
 
     userid = Column(Integer, primary_key=True, nullable=False)
     username = Column(String(32), unique=True, nullable=False)
