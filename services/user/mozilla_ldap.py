@@ -97,7 +97,7 @@ class LDAPUser(object):
                 'uidNumber': str(user_id),
                 'userPassword': password_hash,
                 'primaryNode': '',
-                'accountStatus': 1,
+                'accountStatus': '1',
                 'account-enabled': 'Yes',
                 'mail': email,
                 'mail-verified': key,
@@ -297,7 +297,7 @@ class LDAPUser(object):
         Returns:
             True if the change was successful, False otherwise
         """
-        if ldap_user is not None and ldap_password is None:
+        if ldap_user is not None and ldap_pass is None:
             return False
 
         dn = self._get_dn(user)
