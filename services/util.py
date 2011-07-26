@@ -65,6 +65,7 @@ from sqlalchemy.exc import OperationalError, TimeoutError
 
 from services.config import Config, convert
 from services import logger
+from services.exceptions import BackendError, BackendTimeoutError  # NOQA
 
 
 random.seed()
@@ -384,16 +385,6 @@ def batch(iterable, size=100):
 
     for key, group in itertools.groupby(iter(iterable), ticker):
         yield group
-
-
-class BackendError(Exception):
-    """Raised when the backend is down or fails"""
-    pass
-
-
-class BackendTimeoutError(BackendError):
-    """Raised when the backend times out."""
-    pass
 
 
 def generate_reset_code():

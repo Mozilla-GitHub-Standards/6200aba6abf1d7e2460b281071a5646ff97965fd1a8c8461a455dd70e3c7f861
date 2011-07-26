@@ -194,6 +194,14 @@ class SyncServerApp(object):
                 notify(REQUEST_ENDS, response)
         return __notified
 
+    # information dumped in error logs
+    def get_infos(self, request):
+        """Returns a mapping containing useful info.
+
+        It can be related to the request, or global to the app.
+        """
+        return {'user': str(request.user)}
+
     #
     # entry point
     #
@@ -260,13 +268,26 @@ class SyncServerApp(object):
         params = self._get_params(request)
         try:
             result = function(request, **params)
-        except BackendError:
-            err = traceback.format_exc()
-            hash = create_hash(err)
+        except BackendError as err:
+            err_info = str(err)
+            err_trace = traceback.format_exc()
+            extra_info = ['%s: %s' % (key, value)
+                          for key, value in self.get_infos(request).items()]
+            extra_info = '\n'.join(extra_info)
+            error_log = '%s\n%s\n%s' % (err_info, err_trace, extra_info)
+            hash = create_hash(error_log)
             logger.error(hash)
-            logger.error(err)
+            logger.error(error_log)
             msg = json.dumps("application error: crash id %s" % hash)
-            raise HTTPJsonServiceUnavailable(msg, retry_after=self.retry_after)
+            if err.retry_after is not None:
+                if err.retry_after == 0:
+                    retry_after = None
+                else:
+                    retry_after = err.retry_after
+            else:
+                retry_after = self.retry_after
+
+            raise HTTPJsonServiceUnavailable(msg, retry_after=retry_after)
 
         # create the response object in case we get back a string
         response = self._create_response(request, result, function)

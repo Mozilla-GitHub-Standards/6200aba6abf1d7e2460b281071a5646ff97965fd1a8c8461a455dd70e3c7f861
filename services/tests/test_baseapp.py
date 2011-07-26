@@ -38,6 +38,7 @@ import base64
 import threading
 from time import sleep
 
+from services import logger
 from services.baseapp import SyncServerApp
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
@@ -66,7 +67,13 @@ class _Foo(object):
         return 'here'
 
     def boom(self, request):
-        raise BackendError()
+        raise BackendError(server='http://here', retry_after=10)
+
+    def boom2(self, request):
+        raise BackendError(server='http://here')
+
+    def boom3(self, request):
+        raise BackendError(server='http://here', retry_after=0)
 
     def user(self, request):
         return '|%s|' % request.user.get('username', None)
@@ -78,7 +85,10 @@ class TestBaseApp(unittest.TestCase):
         urls = [('POST', '/', 'foo', 'index'),
                 ('GET', '/secret', 'foo', 'secret', {'auth': True}),
                 ('GET', '/user/{username:[a-zA-Z0-9._-]+}', 'foo', 'user'),
-                ('GET', '/boom', 'foo', 'boom')]
+                ('GET', '/boom', 'foo', 'boom'),
+                ('GET', '/boom2', 'foo', 'boom2'),
+                ('GET', '/boom3', 'foo', 'boom3')]
+
         controllers = {'foo': _Foo}
         config = {'host:here.one.two': 1,
                   'one.two': 2,
@@ -113,16 +123,51 @@ class TestBaseApp(unittest.TestCase):
     def test_retry_after(self):
         config = {'global.retry_after': 60,
                   'auth.backend': 'services.auth.dummy.DummyAuth'}
-        urls = [('GET', '/boom', 'foo', 'boom')]
+        urls = [('GET', '/boom', 'foo', 'boom'),
+                ('GET', '/boom2', 'foo', 'boom2'),
+                ('GET', '/boom3', 'foo', 'boom3')]
+
         controllers = {'foo': _Foo}
         app = SyncServerApp(urls, controllers, config)
         request = _Request('GET', '/boom', 'localhost')
         try:
             app(request)
         except HTTPServiceUnavailable, error:
+            self.assertEqual(error.headers['Retry-After'], '10')
+        else:
+            raise AssertionError()
+
+        # default retry_after value
+        request = _Request('GET', '/boom2', 'localhost')
+        try:
+            app(request)
+        except HTTPServiceUnavailable, error:
             self.assertEqual(error.headers['Retry-After'], '60')
         else:
             raise AssertionError()
+
+        # no retry-after (set to -1)
+        request = _Request('GET', '/boom3', 'localhost')
+        old = logger.error
+        errors = []
+
+        def _error(msg):
+            errors.append(msg)
+        logger.error = _error
+
+        try:
+            try:
+                app(request)
+            except HTTPServiceUnavailable, error:
+                self.assertFalse('Retry-After' in error.headers)
+            else:
+                raise AssertionError()
+        finally:
+            logger.error = old
+
+        self.assertTrue(errors[1].startswith('BackendError on http://here'))
+        for value in app.get_infos(request).values():
+            self.assertTrue(value in errors[1])
 
     def test_heartbeat_debug_pages(self):
 
