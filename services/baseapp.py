@@ -48,7 +48,7 @@ from paste.exceptions.errormiddleware import ErrorMiddleware
 from routes import Mapper
 
 from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPBadRequest, HTTPServiceUnavailable
+from webob.exc import HTTPNotFound, HTTPServiceUnavailable
 from webob import Response
 
 from services.util import (convert_config, CatchErrorMiddleware, round_time,
@@ -212,9 +212,6 @@ class SyncServerApp(object):
         if self.killing:
             raise HTTPServiceUnavailable()
 
-        if request.method in ('HEAD',):
-            raise HTTPBadRequest('"%s" not supported' % request.method)
-
         request.server_time = round_time()
 
         # gets request-specific config
@@ -236,7 +233,8 @@ class SyncServerApp(object):
                 raise HTTPServiceUnavailable()
 
             # otherwise we do call the heartbeat page
-            if self.heartbeat_page is not None:
+            if (self.heartbeat_page is not None and
+                request.method in ('HEAD', 'GET')):
                 return self._heartbeat(request)
 
         if self.debug_page is not None and url == '/%s' % self.debug_page:

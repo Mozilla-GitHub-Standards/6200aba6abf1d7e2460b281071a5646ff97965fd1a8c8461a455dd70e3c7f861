@@ -186,6 +186,12 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.body, '')
 
+        # we can get heartbeats with a HEAD call
+        request = _Request('HEAD', '/__heartbeat__', 'localhost')
+        res = app(request)
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.body, '')
+
         # the debug page returns a 200 / info in the body
         request = _Request('GET', '/__debug__', 'localhost')
         res = app(request)
