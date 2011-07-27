@@ -46,7 +46,8 @@ sql_config = {'backend': 'services.user.sql.SQLUser',
 ldap_config = {'backend': 'services.user.mozilla_ldap.LDAPUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
-               'passwd': 'secret'}
+               'passwd': 'secret',
+               'additional': 'foo'}
 sreg_config = {'backend': 'services.user.sreg.SregUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
