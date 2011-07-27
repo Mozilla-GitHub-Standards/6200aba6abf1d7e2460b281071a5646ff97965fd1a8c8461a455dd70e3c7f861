@@ -46,16 +46,14 @@ sql_config = {'backend': 'services.user.sql.SQLUser',
 ldap_config = {'backend': 'services.user.mozilla_ldap.LDAPUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
-               'passwd': 'secret'
-              }
+               'passwd': 'secret'}
 sreg_config = {'backend': 'services.user.sreg.SregUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
                'passwd': 'secret',
                'sreg_location': 'localhost',
                'sreg_path': '',
-               'sreg_scheme': 'http'
-              }
+               'sreg_scheme': 'http'}
 
 
 class TestUser(unittest.TestCase):
@@ -79,11 +77,13 @@ class TestUser(unittest.TestCase):
         user3['username'] = 'user3'
 
         #make sure it can't create an existing user
-        self.assertEquals(mgr.create_user('user1', 'password1', 'test@moz.com'),
+        self.assertEquals(mgr.create_user('user1', 'password1',
+                                          'test@moz.com'),
                           False)
 
         self.assertEquals(mgr.authenticate_user(user1, 'password1'), user1_id)
-        self.assertEquals(mgr.authenticate_user(user2, u'pásswørd1'), user2_id)
+        self.assertEquals(mgr.authenticate_user(user2, u'pásswørd1'),
+                          user2_id)
 
         #make sure that an empty password doesn't do bad things
         self.assertEquals(mgr.authenticate_user(user2, ''), None)
@@ -141,14 +141,15 @@ class TestUser(unittest.TestCase):
 
         #make sure user 1 can't log in after deletion and user2 can
         self.assertEquals(mgr.authenticate_user(user1, 'password3'), None)
-        self.assertEquals(mgr.authenticate_user(user2, u'pásswørd1'), user2_id)
+        self.assertEquals(mgr.authenticate_user(user2, u'pásswørd1'),
+                          user2_id)
 
     def test_user_memory(self):
         self._tests(load_and_configure(memory_config))
 
     def test_user_sql(self):
         try:
-            import sqlalchemy
+            import sqlalchemy  # NOQA
         except ImportError:
             return
 
@@ -156,7 +157,7 @@ class TestUser(unittest.TestCase):
 
     def test_user_ldap(self):
         try:
-            import ldap
+            import ldap  # NOQA
             user1 = User()
             user1['username'] = 'test'
             mgr = load_and_configure(ldap_config)

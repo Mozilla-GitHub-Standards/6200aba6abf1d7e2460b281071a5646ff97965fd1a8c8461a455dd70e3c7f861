@@ -96,7 +96,8 @@ class Authentication(object):
 
             auth = auth[len('Basic '):].strip()
             try:
-                # Split in such a way as to preserve passwords that contain ':'.
+                # Split in such a way as to preserve
+                # passwords that contain ':'.
                 user_name, password = base64.decodestring(auth).split(':', 1)
             except (binascii.Error, ValueError):
                 raise HTTPUnauthorized('Invalid token')
