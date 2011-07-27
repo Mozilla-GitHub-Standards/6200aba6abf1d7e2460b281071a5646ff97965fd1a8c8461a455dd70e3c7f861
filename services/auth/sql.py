@@ -42,6 +42,7 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.sql import bindparam, select, insert, update, delete
+from sqlalchemy.pool import NullPool
 
 from services import logger
 from services.util import (validate_password, ssha256,
@@ -83,16 +84,18 @@ class SQLAuth(ResetCodeManager):
     """SQL authentication."""
 
     def __init__(self, sqluri=_SQLURI, pool_size=20, pool_recycle=60,
-                 create_tables=False, **kw):
-        sqlkw = {'pool_size': int(pool_size),
-                 'pool_recycle': int(pool_recycle),
-                 'logging_name': 'weaveserver'}
-
-        if sqluri.startswith('mysql'):
-            sqlkw['reset_on_return'] = False
-
+                 create_tables=False, no_pool=False, **kw):
+        sqlkw = {'logging_name': 'weaveserver'}
         if sqluri.startswith('sqlite'):
             sqlkw['listeners'] = [SetTextFactory()]
+        else:
+            if not no_pool:
+                sqlkw['pool_size'] = int(pool_size)
+                sqlkw['pool_recycle'] = int(pool_recycle)
+            if sqluri.startswith('mysql'):
+                sqlkw['reset_on_return'] = False
+        if no_pool or sqluri.startswith('sqlite'):
+            sqlkw['poolclass'] = NullPool
 
         engine = create_engine(sqluri, **sqlkw)
         users.metadata.bind = engine

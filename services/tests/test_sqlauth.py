@@ -38,6 +38,7 @@ import unittest
 import datetime
 
 from sqlalchemy.sql import text
+from sqlalchemy.pool import NullPool
 
 from services.tests.support import initenv
 from services.auth.sql import SQLAuth
@@ -117,6 +118,13 @@ class TestSQLAuth(unittest.TestCase):
         # this should fail because the table is absent
         self.assertRaises(BackendError, auth.authenticate_user,
                           'tarek', 'tarek')
+
+    def test_no_pool(self):
+        # checks that sqlite gets the NullPool by default
+        testsdir = os.path.dirname(__file__)
+        conf = os.path.join(testsdir, 'tests_nocreate.ini')
+        appdir, config, auth = initenv(conf)
+        self.assertTrue(isinstance(auth._engine.pool, NullPool))
 
 
 def test_suite():

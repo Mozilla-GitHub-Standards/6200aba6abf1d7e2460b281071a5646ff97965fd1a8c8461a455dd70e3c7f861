@@ -44,6 +44,7 @@ from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.pool import NullPool
 
 from services.util import (validate_password, ssha256, safe_execute)
 from services.user import User
@@ -86,16 +87,19 @@ class SQLUser(object):
     """SQL authentication."""
 
     def __init__(self, sqluri=_SQLURI, pool_size=20, pool_recycle=60,
-                 check_account_state=True, create_tables=True, **kw):
-        sqlkw = {'pool_size': int(pool_size),
-                 'pool_recycle': int(pool_recycle),
-                 'logging_name': 'weaveserver'}
-
-        if sqluri.startswith('mysql'):
-            sqlkw['reset_on_return'] = False
-
+                 check_account_state=True, create_tables=True, no_pool=False,
+                 **kw):
+        sqlkw = {'logging_name': 'weaveserver'}
         if sqluri.startswith('sqlite'):
             sqlkw['listeners'] = [SetTextFactory()]
+        else:
+            if not no_pool:
+                sqlkw['pool_size'] = int(pool_size)
+                sqlkw['pool_recycle'] = int(pool_recycle)
+            if sqluri.startswith('mysql'):
+                sqlkw['reset_on_return'] = False
+        if no_pool or sqluri.startswith('sqlite'):
+            sqlkw['poolclass'] = NullPool
 
         self.check_account_state = check_account_state
         self._engine = create_engine(sqluri, **sqlkw)
