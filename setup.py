@@ -33,10 +33,22 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
+import os
+import re
 from setuptools import setup, find_packages
 
 install_requires = ['SQLALchemy<=0.6.99', 'Paste', 'PasteDeploy', 'WebOb',
                     'Routes', 'simplejson', 'cef', 'wsgiproxy']
 
-setup(name='Services', version='2.6', packages=find_packages(),
+
+# extracting the version number from the .spec file
+here = os.path.dirname(__file__)
+spec = os.path.join(here, 'Services.spec')
+with open(spec) as f:
+    spec = f.read()
+
+_VERSION = re.compile('^%define version (.*)$', re.M)
+version = _VERSION.findall(spec)[0]
+
+setup(name='Services', version=version, packages=find_packages(),
       install_requires=install_requires)
