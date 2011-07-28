@@ -40,7 +40,6 @@ from hashlib import sha1
 import random
 
 import ldap
-from ldap.modlist import addModlist
 
 from services import logger
 from services.user import User
@@ -113,8 +112,8 @@ class LDAPUser(object):
         userobj['mail'] = email
         userobj['dn'] = dn
 
-        #need to turn the user hash into ldap form
-        user = addModlist(user)
+        #need to turn the user hash into tuples
+        user = user.items()
 
         with self._conn() as conn:
             try:
