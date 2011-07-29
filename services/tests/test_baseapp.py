@@ -43,6 +43,8 @@ from services.baseapp import SyncServerApp
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
                              unsubscribe, APP_ENDS)
+from services.wsgiauth import Authentication
+
 from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable
 
 
@@ -81,19 +83,19 @@ class _Foo(object):
 
 class TestBaseApp(unittest.TestCase):
 
-    def setUp(self):
-        urls = [('POST', '/', 'foo', 'index'),
-                ('GET', '/secret', 'foo', 'secret', {'auth': True}),
-                ('GET', '/user/{username:[a-zA-Z0-9._-]+}', 'foo', 'user'),
-                ('GET', '/boom', 'foo', 'boom'),
-                ('GET', '/boom2', 'foo', 'boom2'),
-                ('GET', '/boom3', 'foo', 'boom3')]
+    urls = [('POST', '/', 'foo', 'index'),
+            ('GET', '/secret', 'foo', 'secret', {'auth': True}),
+            ('GET', '/user/{username:[a-zA-Z0-9._-]+}', 'foo', 'user'),
+            ('GET', '/boom', 'foo', 'boom'),
+            ('GET', '/boom2', 'foo', 'boom2'),
+            ('GET', '/boom3', 'foo', 'boom3')]
+    controllers = {'foo': _Foo}
+    config = {'host:here.one.two': 1,
+                'one.two': 2,
+                'auth.backend': 'services.auth.dummy.DummyAuth'}
 
-        controllers = {'foo': _Foo}
-        config = {'host:here.one.two': 1,
-                  'one.two': 2,
-                  'auth.backend': 'services.auth.dummy.DummyAuth'}
-        self.app = SyncServerApp(urls, controllers, config)
+    def setUp(self):
+        self.app = SyncServerApp(self.urls, self.controllers, self.config)
 
     def test_host_config(self):
         request = _Request('POST', '/', 'localhost')
@@ -105,10 +107,18 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(res.body, '1')
 
     def test_auth(self):
+        # we don't have any auth by default
+        request = _Request('GET', '/secret', 'localhost')
+        res = self.app(request)
+        self.assertEqual(res.body, 'here')
+
+        # now let's add an auth
+        app = SyncServerApp(self.urls, self.controllers,
+                            self.config, auth_class=Authentication)
         request = _Request('GET', '/secret', 'localhost')
 
         try:
-            self.app(request)
+            app(request)
         except HTTPUnauthorized, error:
             self.assertEqual(error.headers['WWW-Authenticate'],
                              'Basic realm="Sync"')
@@ -117,7 +127,7 @@ class TestBaseApp(unittest.TestCase):
 
         auth = 'Basic %s' % base64.b64encode('tarek:tarek')
         request.environ['HTTP_AUTHORIZATION'] = auth
-        res = self.app(request)
+        res = app(request)
         self.assertEqual(res.body, 'here')
 
     def test_retry_after(self):

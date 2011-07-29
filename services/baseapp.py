@@ -54,7 +54,6 @@ from webob import Response
 from services.util import (convert_config, CatchErrorMiddleware, round_time,
                          BackendError, create_hash, HTTPJsonServiceUnavailable)
 from services import logger
-from services.wsgiauth import Authentication
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
 from services.user import User
@@ -64,7 +63,7 @@ class SyncServerApp(object):
     """ Dispatches the request to the right controller by using Routes.
     """
     def __init__(self, urls, controllers, config=None,
-                 auth_class=Authentication):
+                 auth_class=None):
         self.mapper = Mapper()
         if config is not None:
             self.config = config
@@ -329,7 +328,7 @@ class SyncServerApp(object):
         return getattr(controller, action, None)
 
 
-def set_app(urls, controllers, klass=SyncServerApp, auth_class=Authentication,
+def set_app(urls, controllers, klass=SyncServerApp, auth_class=None,
             wrapper=None):
     """make_app factory."""
     def make_app(global_conf, **app_conf):
