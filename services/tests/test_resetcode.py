@@ -68,6 +68,8 @@ class TestResetCodeManager(unittest.TestCase):
         mgr.clear_reset_code(user)
         self.assertFalse(mgr.verify_reset_code(user, code3))
 
+        self.assertFalse(mgr.verify_reset_code(user, None))
+
     def test_reset_code_sql(self):
 
         config = {'backend': 'services.resetcodes.rc_sql.ResetCodeSQL',

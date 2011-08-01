@@ -88,6 +88,9 @@ class ResetCode(object):
         Returns:
             True or False
         """
+        if code is None:
+            return False
+
         return _RE_CODE.match(code) is not None
 
     def generate_reset_code(self, user, overwrite=False):
