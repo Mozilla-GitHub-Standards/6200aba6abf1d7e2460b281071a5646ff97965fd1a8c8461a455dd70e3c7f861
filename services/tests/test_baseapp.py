@@ -334,6 +334,34 @@ class TestBaseApp(unittest.TestCase):
         # and we should have had a event ping
         self.assertEquals(pings, ['app ends'])
 
+    def test_nosigclean(self):
+        # check that we can deactivate sigterm/sigint hooks
+        pings = []
+
+        def end():
+            pings.append('app ends')
+
+        subscribe(APP_ENDS, end)
+        try:
+            config = {'global.heartbeat_page': '__heartbeat__',
+                      'global.debug_page': '__debug__',
+                      'auth.backend': 'services.auth.dummy.DummyAuth',
+                      'global.clean_shutdown': False}
+
+            urls = []
+            controllers = {}
+            app = SyncServerApp(urls, controllers, config)
+
+            # heartbeat should work
+            request = _Request('GET', '/__heartbeat__', 'localhost')
+            app(request)
+
+        finally:
+            unsubscribe(APP_ENDS, end)
+
+        # and we should have had no ping
+        self.assertEquals(pings, [])
+
 
 def test_suite():
     suite = unittest.TestSuite()

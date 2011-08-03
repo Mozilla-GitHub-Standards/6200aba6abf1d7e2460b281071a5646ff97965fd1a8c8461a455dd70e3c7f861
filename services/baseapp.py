@@ -80,6 +80,9 @@ class SyncServerApp(object):
         # debug page, if any
         self.debug_page = self.config.get('global.debug_page')
 
+        # check if we want to clean when the app ends
+        self.sigclean = self.config.get('global.clean_shutdown', True)
+
         # loading the authentication tool
         self.auth = None if auth_class is None else auth_class(self.config)
 
@@ -121,8 +124,9 @@ class SyncServerApp(object):
                                       'global.graceful_shutdown_interval', 1.)
         self.hard_shutdown_interval = self.config.get(
                                           'global.hard_shutdown_interval', 1.)
-        signal.signal(signal.SIGTERM, self._sigterm)
-        signal.signal(signal.SIGINT, self._sigterm)
+        if self.sigclean:
+            signal.signal(signal.SIGTERM, self._sigterm)
+            signal.signal(signal.SIGINT, self._sigterm)
 
     def _sigterm(self, signal, frame):
         self.shutting = True
