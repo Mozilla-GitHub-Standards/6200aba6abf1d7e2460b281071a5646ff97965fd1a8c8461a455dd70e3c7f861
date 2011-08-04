@@ -36,6 +36,24 @@
 import unittest
 from services.pluginreg import PluginRegistry, load_and_configure
 
+import abc
+from services.pluginreg import PluginRegistry
+
+
+class ClassInterface(PluginRegistry):
+    """Abstract"""
+    @abc.abstractmethod
+    def foo(self):
+        pass
+
+class ImplementsCorrectly(object):
+    def foo(self):
+        pass
+
+class ImplementsBadly(object):
+    def bar(self):
+        pass
+
 
 class Dummy(object):
     def __init__(self, foo=None, **kw):
@@ -74,6 +92,21 @@ class TestPlugin(unittest.TestCase):
         obj = load_and_configure(good_config, 'test')
         self.assertTrue(isinstance(obj, Dummy))
         self.assertTrue(obj.foo == 'bar')
+
+        missing_interface = {'interface': 'services.tests.test_pluginreg.Nope'}
+        bad_interface = {'backend':
+                         'services.tests.test_pluginreg.ImplementsBadly',
+                         'interface':
+                         'services.tests.test_pluginreg.ClassInterface'}
+        good_interface = {'backend':
+                         'services.tests.test_pluginreg.ImplementsCorrectly',
+                         'interface':
+                         'services.tests.test_pluginreg.ClassInterface'}
+        obj = load_and_configure(good_interface)
+        self.assertTrue(isinstance(obj, ImplementsCorrectly))
+        self.assertRaises(TypeError, load_and_configure, bad_interface)
+        self.assertRaises(ImportError, load_and_configure, missing_interface)
+
 
 
 def test_suite():

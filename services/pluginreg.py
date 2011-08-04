@@ -92,6 +92,11 @@ def load_and_configure(config, section=None, cls_param='backend'):
     if section:
         params = filter_params(section, params)
 
+    if 'interface' in params:
+        interface = _resolve_name(params['interface'])
+        del params['interface']
+        return interface.get_from_config(params)
+
     backend_name = params[cls_param]
     backend = None
     try:
