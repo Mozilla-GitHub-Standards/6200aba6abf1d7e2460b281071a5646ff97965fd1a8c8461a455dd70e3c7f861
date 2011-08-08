@@ -39,6 +39,9 @@ import os
 from logging.config import fileConfig
 import smtplib
 from email import message_from_string
+import contextlib
+import logging
+from StringIO import StringIO
 
 from services.config import Config
 from services.auth import ServicesAuth
@@ -217,3 +220,26 @@ def get_sent_email(index=-1):
     sender, rcpts, msg = _FakeSMTP.msgs[index]
     msg = message_from_string(msg)
     return sender, rcpts, msg
+
+
+@contextlib.contextmanager
+def capture_logs(logger='syncserver', level=logging.ERROR):
+    # setting up the logging
+    stream = StringIO()
+    if logger == 'root':
+        logger = logging.getLogger()
+    else:
+        logger = logging.getLogger(logger)
+    ch = logging.StreamHandler(stream)
+    ch.setLevel(level)
+    logger.addHandler(ch)
+
+    # let's run the test
+    try:
+        yield stream
+    finally:
+        # we want to rewind the stream for conveniency
+        stream.seek(0)
+
+        # remove the handler
+        logger.removeHandler(ch)
