@@ -44,6 +44,9 @@ from webob import Response
 from services.auth import NoEmailError
 from services.resetcodes import AlreadySentError
 from services.respcodes import ERROR_NO_EMAIL_ADDRESS
+from services.tests.support import check_memcache
+
+from nose.plugins.skip import SkipTest
 
 
 class TestResetCodeManager(unittest.TestCase):
@@ -79,10 +82,8 @@ class TestResetCodeManager(unittest.TestCase):
         self._tests(load_and_configure(config))
 
     def test_reset_code_memcache(self):
-        try:
-            import memcache   # NOQA
-        except ImportError:
-            return
+        if check_memcache is False:
+            raise SkipTest()
 
         config = {'backend':
                         'services.resetcodes.rc_memcache.ResetCodeMemcache',

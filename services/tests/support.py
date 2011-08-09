@@ -149,6 +149,18 @@ def initenv(config=None):
     auth = ServicesAuth.get_from_config(config, 'auth')
     return topdir, config, auth
 
+def check_memcache():
+    try:
+        import memcache   # NOQA
+    except ImportError:
+        return False
+
+    #see if we have a memcache install
+    engine = memcache.Client(['127.0.0.1:11211'])
+    if not engine.set('test:foo', 1):
+        return False
+    engine.delete('test:foo')
+    return True
 
 def get_app(wrapped):
     app = wrapped
