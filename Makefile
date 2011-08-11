@@ -56,7 +56,7 @@ build_extras:
 	$(INSTALL) recaptcha-client
 	$(INSTALL) wsgiproxy
 	$(INSTALL) wsgi_intercept
-	$(INSTALL) "python-ldap == 2.3.12"
+	$(INSTALL) "python-ldap == 2.3.13"
 	$(INSTALL) coverage
 	$(INSTALL) Pygments
 
