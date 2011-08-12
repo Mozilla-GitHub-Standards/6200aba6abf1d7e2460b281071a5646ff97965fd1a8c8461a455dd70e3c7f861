@@ -38,8 +38,10 @@ import base64
 from webob.exc import HTTPUnauthorized
 
 from services.wsgiauth import Authentication
-from services.auth.dummy import DummyAuth
+from services.user import User, ServicesUser
 
+
+_default_user = User('tarek', '1')
 
 class Request(object):
 
@@ -48,18 +50,20 @@ class Request(object):
         self.environ = environ
 
 
-class AuthTool(DummyAuth):
+class AuthTool(object):
 
-    def authenticate_user(self, *args):
-        if args[0] == 'tarekbad':
+    def authenticate_user(self, user, password, *args):
+        if user['username'] == 'tarekbad':
             return None
+        user['userid'] = '1'
         return 1
 
 
-class ColonPasswordAuthTool(DummyAuth):
+class ColonPasswordAuthTool(object):
 
-    def authenticate_user(self, *args):
-        if args[0] == 'user' and args[1] == 'pass:word:':
+    def authenticate_user(self, user, password, *args):
+        if user['username'] == 'tarek' and password == 'pass:word:':
+            user['userid'] = '1'
             return 1
         return None
 
@@ -72,11 +76,11 @@ class AuthenticationTestCase(unittest.TestCase):
         config = {'auth.backend':
                   'services.tests.test_wsgiauth.ColonPasswordAuthTool'}
         auth = Authentication(config)
-        token = 'Basic ' + base64.b64encode('user:pass:word:')
+        token = 'Basic ' + base64.b64encode('tarek:pass:word:')
         req = Request('/1.0/tarek/info/collections',
                 {'HTTP_AUTHORIZATION': token})
         res = auth.authenticate_user(req, {})
-        self.assertEquals(res, 1)
+        self.assertEquals(res, _default_user)
 
     def test_authenticate_user(self):
 
@@ -91,7 +95,7 @@ class AuthenticationTestCase(unittest.TestCase):
         req = Request('/1.0/tarek/info/collections',
                 {'HTTP_AUTHORIZATION': token})
         res = auth.authenticate_user(req, {})
-        self.assertEquals(res, 1)
+        self.assertEquals(res, _default_user)
 
         # weird tokens should not break the function
         bad_token1 = 'Basic ' + base64.b64encode('tarektarek')

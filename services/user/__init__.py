@@ -38,7 +38,23 @@
 """
 
 import abc
+from hashlib import sha1
+import base64
+
 from services.pluginreg import PluginRegistry
+from services.util import email_to_idn
+
+def extract_username(username):
+    """Extracts the user name.
+
+    Takes the username and if it is an email address, munges it down
+    to the corresponding 32-character username
+    """
+    if '@' not in username:
+        return username
+    username = email_to_idn(username).lower()
+    hashed = sha1(username).digest()
+    return base64.b32encode(hashed).lower()
 
 
 class NoEmailError(Exception):

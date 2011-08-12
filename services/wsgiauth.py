@@ -42,15 +42,14 @@ import base64
 from webob.exc import HTTPUnauthorized, HTTPBadRequest
 from cef import log_cef
 
-from services.auth import get_auth
-from services.util import extract_username
-
+from services.user import User, extract_username
+from services.pluginreg import load_and_configure
 
 class Authentication(object):
     """Authentication tool. defines the authentication strategy"""
     def __init__(self, config):
         self.config = config
-        self.backend = get_auth(self.config)
+        self.backend = load_and_configure(self.config, 'auth')
 
     def check(self, request, match):
         """Checks if the current request/match can be viewed.
@@ -62,14 +61,15 @@ class Authentication(object):
         if match.get('auth') != 'True':
             return
 
-        user_id = self.authenticate_user(request, self.config,
+        user = self.authenticate_user(request, self.config,
                                          match.get('username'))
-        if user_id is None:
+        if user is None or user['userid'] is None:
             headers = [('WWW-Authenticate', 'Basic realm="Sync"'),
                        ('Content-Type', 'text/plain')]
             raise HTTPUnauthorized(headerlist=headers)
 
-        match['user_id'] = user_id
+        match['user_id'] = user['userid']
+        return user
 
     def authenticate_user(self, request, config, username=None):
         """Authenticates a user and returns his id.
@@ -118,6 +118,7 @@ class Authentication(object):
                 raise HTTPBadRequest('Invalid characters specified in ' +
                                      'username', {}, 'Username must be BIDI ' +
                                      'compliant UTF-8')
+            user = User(user_name)
 
             # let's try an authentication
             # the authenticate_user API takes a unicode UTF-8 for the password
@@ -125,10 +126,12 @@ class Authentication(object):
 
             # XXX to be removed once we get the proper fix see bug #662859
             if hasattr(self.backend, 'check_node') and self.backend.check_node:
-                user_id = self.backend.authenticate_user(user_name, password,
-                                                     environ.get('HTTP_HOST'))
+                user_id = self.backend.authenticate_user(user, password,
+                                                        ['syncNode'])
+                if user.get('syncNode') != environ.get('HTTP_HOST'):
+                    user = False
             else:
-                user_id = self.backend.authenticate_user(user_name, password)
+                user_id = self.backend.authenticate_user(user, password)
 
             if user_id is None:
                 err = 'Authentication Failed for Backend service ' + user_name
@@ -146,4 +149,4 @@ class Authentication(object):
             request.user_password = password
             request._authorization = environ['HTTP_AUTHORIZATION']
             del environ['HTTP_AUTHORIZATION']
-            return user_id
+            return user

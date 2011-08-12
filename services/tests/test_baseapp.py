@@ -81,6 +81,14 @@ class _Foo(object):
         return '|%s|' % request.user.get('username', None)
 
 
+class AuthTool(object):
+
+    def authenticate_user(self, user, password, *args):
+        if user['username'] == 'tarekbad':
+            return None
+        user['userid'] = '1'
+        return 1
+
 class TestBaseApp(unittest.TestCase):
 
     urls = [('POST', '/', 'foo', 'index'),
@@ -92,7 +100,7 @@ class TestBaseApp(unittest.TestCase):
     controllers = {'foo': _Foo}
     config = {'host:here.one.two': 1,
                 'one.two': 2,
-                'auth.backend': 'services.auth.dummy.DummyAuth'}
+                'auth.backend': 'services.tests.test_baseapp.AuthTool'}
 
     def setUp(self):
         self.app = SyncServerApp(self.urls, self.controllers, self.config)
@@ -132,7 +140,7 @@ class TestBaseApp(unittest.TestCase):
 
     def test_retry_after(self):
         config = {'global.retry_after': 60,
-                  'auth.backend': 'services.auth.dummy.DummyAuth'}
+                  'auth.backend': 'services.tests.test_baseapp.AuthTool'}
         urls = [('GET', '/boom', 'foo', 'boom'),
                 ('GET', '/boom2', 'foo', 'boom2'),
                 ('GET', '/boom3', 'foo', 'boom3')]
@@ -183,7 +191,7 @@ class TestBaseApp(unittest.TestCase):
 
         config = {'global.heartbeat_page': '__heartbeat__',
                   'global.debug_page': '__debug__',
-                  'auth.backend': 'services.auth.dummy.DummyAuth'}
+                  'auth.backend': 'services.tests.test_baseapp.AuthTool'}
         urls = []
         controllers = {}
 
