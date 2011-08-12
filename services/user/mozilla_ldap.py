@@ -96,7 +96,7 @@ class LDAPUser(object):
                 'uid': user_name,
                 'uidNumber': str(user_id),
                 'userPassword': password_hash,
-                'primaryNode': '',
+                'primaryNode': 'weave:',
                 'accountStatus': '1',
                 'account-enabled': 'Yes',
                 'mail': email,
