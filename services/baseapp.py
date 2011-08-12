@@ -250,12 +250,9 @@ class SyncServerApp(object):
 
         match, __ = match
 
-        # creating a user object to be passed around the request
-        request.user = User()
-
         # authentication control
         if self.auth is not None:
-            request.user = self.auth.check(request, match)
+            self.auth.check(request, match)
 
         function = self._get_function(match['controller'], match['action'])
         if function is None:
@@ -263,8 +260,10 @@ class SyncServerApp(object):
 
         # extracting all the info from the headers and the url
         request.sync_info = match
-        if  request.user['username'] is None and \
-                                    'username' in request.sync_info:
+
+        # creating a user object to be passed around the request
+        request.user = User()
+        if 'username' in request.sync_info:
             request.user['username'] = request.sync_info['username']
 
         params = self._get_params(request)
