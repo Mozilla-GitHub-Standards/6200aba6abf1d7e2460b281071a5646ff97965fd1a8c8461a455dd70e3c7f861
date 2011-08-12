@@ -422,7 +422,7 @@ class LDAPUser(object):
                 try:
                     conn.modify_s(dn, [old, new])
                     #if we don't bomb out here, we have a valid id
-                    return new_value
+                    return value
                 except ldap.NO_SUCH_ATTRIBUTE, e:
                     logger.error('collision on getting next id. %i' \
                             % new_value)
