@@ -42,15 +42,15 @@ import base64
 from webob.exc import HTTPUnauthorized, HTTPBadRequest
 from cef import log_cef
 
-from services.auth import get_auth
 from services.util import extract_username
+from services.pluginreg import load_and_configure
 
 
 class Authentication(object):
     """Authentication tool. defines the authentication strategy"""
     def __init__(self, config):
         self.config = config
-        self.backend = get_auth(self.config)
+        self.backend = load_and_configure(self.config, 'auth')
 
     def check(self, request, match):
         """Checks if the current request/match can be viewed.
