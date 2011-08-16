@@ -39,17 +39,19 @@ endif
 
 INSTALL += $(INSTALLOPTIONS)
 
-.PHONY: all build build_extras build_rpms test
+.PHONY: all build build_extras build_rpms test update
 
 all:	build
 
 build:
 	$(VIRTUALENV) --no-site-packages --distribute .
 	$(INSTALL) MoPyTools
-	$(INSTALL) -r $(CHANNEL)-reqs.txt
-	$(BUILDAPP) $(PYPIOPTIONS) $(APPNAME) $(DEPS)
 	$(INSTALL) nose
 	$(INSTALL) WebTest
+	$(BUILDAPP) -c $(CHANNELS) $(PYPIOPTIONS) $(DEPS)
+
+update:
+	$(BUILDAPP) -c $(CHANNELS) $(PYPIOPTIONS) $(DEPS)
 
 build_extras:
 	$(INSTALL) MySQL-python
@@ -63,13 +65,5 @@ build_extras:
 test:
 	$(NOSE) $(TESTS)
 
-coverage:
-	rm -rf html
-	- $(NOSE) $(COVEROPTS) $(TESTS)
-
 build_rpms:
-	$(INSTALL) pypi2rpm
-	rm -rf $(CURDIR)/rpms
-	mkdir $(CURDIR)/rpms
-	rm -rf build; $(PYTHON) setup.py --command-packages=pypi2rpm.command bdist_rpm2 --spec-file=Services.spec --dist-dir=$(CURDIR)/rpms
-	$(BUILDRPMS) $(CHANNEL)-reqs.txt --dist-dir=$(CURDIR)/rpms
+	$(BUILDRPMS) -c $(CHANNEL) $(DEPS)
