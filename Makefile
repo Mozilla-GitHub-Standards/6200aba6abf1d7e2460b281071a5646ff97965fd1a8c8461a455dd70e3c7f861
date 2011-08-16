@@ -48,10 +48,10 @@ build:
 	$(INSTALL) MoPyTools
 	$(INSTALL) nose
 	$(INSTALL) WebTest
-	$(BUILDAPP) -c $(CHANNELS) $(PYPIOPTIONS) $(DEPS)
+	$(BUILDAPP) -c $(CHANNEL) $(PYPIOPTIONS) $(DEPS)
 
 update:
-	$(BUILDAPP) -c $(CHANNELS) $(PYPIOPTIONS) $(DEPS)
+	$(BUILDAPP) -c $(CHANNEL) $(PYPIOPTIONS) $(DEPS)
 
 build_extras:
 	$(INSTALL) MySQL-python
