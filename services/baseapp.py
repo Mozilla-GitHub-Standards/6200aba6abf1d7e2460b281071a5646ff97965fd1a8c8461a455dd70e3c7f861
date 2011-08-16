@@ -261,10 +261,12 @@ class SyncServerApp(object):
         # extracting all the info from the headers and the url
         request.sync_info = match
 
-        # creating a user object to be passed around the request
-        request.user = User()
-        if 'username' in request.sync_info:
-            request.user['username'] = request.sync_info['username']
+        # creating a user object to be passed around the request, if one hasn't
+        # already been set
+        if not hasattr(request, 'user'):
+            request.user = User()
+            if 'username' in request.sync_info:
+                request.user['username'] = request.sync_info['username']
 
         params = self._get_params(request)
         try:
