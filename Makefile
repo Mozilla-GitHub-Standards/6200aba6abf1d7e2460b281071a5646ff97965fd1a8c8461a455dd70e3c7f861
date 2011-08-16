@@ -16,7 +16,8 @@ BUILDRPMS = bin/buildrpms
 PYPI = http://pypi.python.org/simple
 PYPI2RPM = bin/pypi2rpm.py --index=$(PYPI)
 PYPIOPTIONS = -i $(PYPI)
-CHANNEL = prod
+CHANNEL = dev
+RPM_CHANNEL = prod
 INSTALL = bin/pip install
 INSTALLOPTIONS = -U -i $(PYPI)
 
@@ -66,4 +67,4 @@ test:
 	$(NOSE) $(TESTS)
 
 build_rpms:
-	$(BUILDRPMS) -c $(CHANNEL) $(DEPS)
+	$(BUILDRPMS) -c $(RPM_CHANNEL) $(DEPS)
