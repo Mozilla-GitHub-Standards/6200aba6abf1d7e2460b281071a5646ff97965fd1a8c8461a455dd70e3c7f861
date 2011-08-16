@@ -44,6 +44,7 @@ from cef import log_cef
 
 from services.util import extract_username
 from services.pluginreg import load_and_configure
+from services.user import User
 
 
 class Authentication(object):
@@ -123,12 +124,28 @@ class Authentication(object):
             # the authenticate_user API takes a unicode UTF-8 for the password
             password = password.decode('utf8')
 
+            #first we need to figure out if this is old-style or new-style auth
+            if hasattr(self.backend, 'generate_reset_code'):
+
             # XXX to be removed once we get the proper fix see bug #662859
-            if hasattr(self.backend, 'check_node') and self.backend.check_node:
-                user_id = self.backend.authenticate_user(user_name, password,
-                                                     environ.get('HTTP_HOST'))
+                if (hasattr(self.backend, 'check_node')
+                    and self.backend.check_node):
+                    user_id = self.backend.authenticate_user(user_name,
+                                            password, environ.get('HTTP_HOST'))
+                else:
+                    user_id = self.backend.authenticate_user(user_name,
+                                                             password)
+                request.user = User(user_name, user_id)
             else:
-                user_id = self.backend.authenticate_user(user_name, password)
+                user = User(user_name)
+                user_id = self.backend.authenticate_user(user, password,
+                                                         ['syncNode'])
+                if (self.config.get('auth.check_node')
+                    and user.get('syncNode') != environ.get('HTTP_HOST')):
+                    user_id = None
+                    user = None
+
+                request.user = user
 
             if user_id is None:
                 err = 'Authentication Failed for Backend service ' + user_name
@@ -145,5 +162,6 @@ class Authentication(object):
             # and remove it from the environ
             request.user_password = password
             request._authorization = environ['HTTP_AUTHORIZATION']
+
             del environ['HTTP_AUTHORIZATION']
             return user_id
