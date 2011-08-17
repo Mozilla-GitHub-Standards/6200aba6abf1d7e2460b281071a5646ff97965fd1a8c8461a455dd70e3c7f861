@@ -43,41 +43,79 @@ import contextlib
 import logging
 from StringIO import StringIO
 
-from services.config import Config
-from services.auth import ServicesAuth
 from services.util import convert_config
 from services.pluginreg import load_and_configure
 
 
 class TestEnv(object):
-    """Class to try to establish the base environment for the tests"""
-    def __init__(self, base):
-        self.topdir = os.path.dirname(base)
+    """Class representing the configuration environment for the tests.
+    """
+    def __init__(self, ini_path=None, ini_dir=None, load_sections=None):
+        """
+        :param ini_dir: Directory path in which to start looking for the ini
+        file.  Will climb the file tree from here looking for 'tests.ini' file,
+        unless 'WEAVE_TESTFILE' env var is set, in which case it will climb the
+        file tree from here looking for 'tests_${WEAVE_TESTFILE}.ini'.
 
-        if 'WEAVE_TESTFILE' in os.environ:
-            test_filename = 'tests_%s.ini' % os.environ['WEAVE_TESTFILE']
-        else:
-            test_filename = 'tests.ini'
+        :param ini_path: Full path to configuration file.  Takes precedence
+        over ini_dir, if both are provided.  Raises IOError if file doesn't
+        exist.
 
-        while True:
-            ini_file = os.path.join(self.topdir, test_filename)
-            if os.path.exists(ini_file):
-                break
+        One or the other of `ini_dir` or `ini_path` arguments MUST be provided.
 
-            if ini_file == ("/%s" % test_filename) \
-                or ini_file == test_filename:
-                raise IOError("cannot locate %s" % test_filename)
+        :param load_sections: A sequence of strings that name the configuration
+        sections that should be dynamically loaded.  Any entry in this sequence
+        could alternately be a 2-tuple containing the name of the section and
+        the corresponding class parameter value to use.
+        """
+        self.start_dir = ini_dir
+        if ini_path:
+            if not os.path.isfile(ini_path):
+                raise IOError("invalid config file: %s" % ini_path)
+            ini_dir = os.path.dirname(ini_path)
+        elif ini_dir:
+            if 'WEAVE_TESTFILE' in os.environ:
+                test_filename = 'tests_%s.ini' % os.environ['WEAVE_TESTFILE']
+            else:
+                test_filename = 'tests.ini'
 
-            self.topdir = os.path.split(self.topdir)[0]
+            while True:
+                ini_path = os.path.join(ini_dir, test_filename)
+                if os.path.exists(ini_path):
+                    break
 
-        cfg = RawConfigParser()
-        cfg.read(ini_file)
+                if ini_path == ("/%s" % test_filename) \
+                    or ini_path == test_filename:
+                    raise IOError("cannot locate %s" % test_filename)
+
+                ini_dir = os.path.split(ini_dir)[0]
+            else:
+                raise ValueError('No ini_path or ini_dir specified.')
+
+        self.ini_dir = ini_dir
+        self.ini_path = ini_path
+
+        ini_cfg = RawConfigParser()
+        ini_cfg.read(ini_path)
 
         # loading loggers
-        if cfg.has_section('loggers'):
-            fileConfig(ini_file)
+        if ini_cfg.has_section('loggers'):
+            fileConfig(ini_path)
 
-        self.config = Config(ini_file).get_map()
+        self.config = self.convert_config(ini_cfg, ini_path)
+
+        if load_sections is not None:
+            for section in load_sections:
+                if isinstance(section, tuple):
+                    self.add_class(section[0], cls_param=section[1])
+                else:
+                    self.add_class(section)
+
+    def convert_config(self, ini_cfg, ini_path):
+        here = {'here': os.path.dirname(os.path.realpath(ini_path))}
+        cfg_dict = dict([(key, value % here) for key, value in
+                         ini_cfg.items('DEFAULT') + ini_cfg.items('app:main')])
+        return convert_config(cfg_dict)
 
     def add_class(self, section, cls_param="backend"):
         """Takes the name of a config section and uses it to instantiate a
@@ -108,46 +146,16 @@ def patch_captcha(valid=True):
 
 # non-class way of doing this
 def initenv(config=None):
-    """Reads the config file and instanciates an auth and a storage.
-
-    The WEAVE_TESTFILE=name environment variable can be used to point
-    a particular tests_name.ini file.
+    """Reads the config file and instantiates an auth and a storage.
     """
-    topdir = os.path.dirname(__file__)
-
-    if 'WEAVE_TESTFILE' in os.environ:
-        test_filename = 'tests_%s.ini' % os.environ['WEAVE_TESTFILE']
+    env_args = dict(load_sections=['auth'])
+    if not config:
+        env_args['ini_dir'] = os.path.dirname(__file__)
     else:
-        test_filename = 'tests.ini'
+        env_args['ini_path'] = config
+    testenv = TestEnv(**env_args)
+    return testenv.ini_dir, testenv.config, testenv.auth
 
-    while True:
-        ini_file = os.path.join(topdir, test_filename)
-        if os.path.exists(ini_file):
-            break
-
-        topdir = os.path.split(topdir)[0]
-        if topdir == '/':
-            break
-
-    if not os.path.exists(ini_file):
-        raise IOError("cannot locate %s" % test_filename)
-
-    if config is None:
-        config = ini_file
-
-    cfg = RawConfigParser()
-    cfg.read(config)
-
-    # loading loggers
-    if cfg.has_section('loggers'):
-        fileConfig(config)
-
-    here = {'here': os.path.dirname(os.path.realpath(config))}
-    config = dict([(key, value % here)for key, value in
-                   cfg.items('DEFAULT') + cfg.items('app:main')])
-    config = convert_config(config)
-    auth = ServicesAuth.get_from_config(config, 'auth')
-    return topdir, config, auth
 
 def check_memcache():
     try:
@@ -161,6 +169,7 @@ def check_memcache():
         return False
     engine.delete('test:foo')
     return True
+
 
 def get_app(wrapped):
     app = wrapped
