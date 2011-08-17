@@ -10,3 +10,4 @@ Core library that provides these features:
 - Error codes for Sync
 - Authentication back ends for Sync
 - Event registry
+
