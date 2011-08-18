@@ -52,9 +52,10 @@ class LDAPUser(object):
 
     def __init__(self, ldapuri, users_root='ou=users,dc=mozilla',
                  check_account_state=True,
-                 ldap_timeout=10, **kw):
+                 ldap_timeout=10, search_root='dc=mozilla', **kw):
         self.check_account_state = check_account_state
         self.users_root = users_root
+        self.search_root = search_root
         self.ldap_timeout = ldap_timeout
 
         self.conn = ConnectionManager(ldapuri, **kw)
@@ -345,7 +346,7 @@ class LDAPUser(object):
             #we have nothing to do a search on
             return None
 
-        dn = self.users_root
+        dn = self.search_root
         scope = ldap.SCOPE_SUBTREE
         filter = '(uid=%s)' % user_name
         attrs = ['uidNumber']
