@@ -59,6 +59,10 @@ def _bind_fails(self, who='', cred='', **kw):
     raise ldap.LDAPError('LDAP connection invalid')
 
 
+def _bind_fails2(self, who='', cred='', **kw):
+    raise ldap.SERVER_DOWN()
+
+
 class TestLDAPConnection(unittest.TestCase):
 
     def setUp(self):
@@ -143,5 +147,26 @@ class TestLDAPConnection(unittest.TestCase):
                 pass
         except BackendError:
             pass
+        else:
+            raise AssertionError()
+
+    def test_simple_bind_fails_proper_msg(self):
+        if not LDAP:
+            return
+
+        # the binding fails with an LDAPError
+        StateConnector.simple_bind_s = _bind_fails2
+        uri = ''
+        dn = 'uid=adminuser,ou=logins,dc=mozilla'
+        passwd = 'adminuser'
+        cm = ConnectionManager(uri, dn, passwd, use_pool=True, size=2)
+        self.assertEqual(len(cm), 0)
+
+        try:
+            with cm.connection('dn', 'pass'):
+                pass
+        except BackendError, err:
+            wanted = 'BackendError on \n\nUnable to connect to server'
+            self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()

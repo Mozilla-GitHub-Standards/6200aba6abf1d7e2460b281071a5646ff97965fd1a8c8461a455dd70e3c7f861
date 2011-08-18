@@ -163,7 +163,12 @@ class ConnectionManager(object):
 
             # we failed
             if not connected:
-                raise BackendError(str(e))
+                if e is not None:
+                    msg = str(e)
+                else:
+                    msg = 'Unable to connect to server'
+
+                raise BackendError(msg, server=self.uri)
 
         conn.active = True
 
