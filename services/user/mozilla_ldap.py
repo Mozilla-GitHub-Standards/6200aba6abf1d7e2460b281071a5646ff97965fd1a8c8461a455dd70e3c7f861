@@ -44,7 +44,7 @@ import ldap
 from services import logger
 from services.user import User
 from services.util import BackendError, ssha
-from services.user.ldapconnection import ConnectionManager
+from services.ldappool import ConnectionManager
 
 
 class LDAPUser(object):

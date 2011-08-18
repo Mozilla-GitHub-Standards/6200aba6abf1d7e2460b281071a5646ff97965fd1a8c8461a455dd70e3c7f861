@@ -41,7 +41,7 @@ import urlparse
 from services.util import BackendError, get_url
 from services.auth.ldapsql import LDAPAuth
 from services import logger
-from services.auth.ldapconnection import StateConnector
+from services.ldappool import StateConnector
 
 
 class MozillaAuth(LDAPAuth):

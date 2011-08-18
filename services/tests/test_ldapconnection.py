@@ -43,9 +43,9 @@ except ImportError:
 from services.util import BackendError
 
 if LDAP:
-    from services.auth.ldapconnection import ConnectionManager
-    from services.auth.ldapconnection import StateConnector
-    from services.auth.ldapconnection import MaxConnectionReachedError
+    from services.ldappool import ConnectionManager
+    from services.ldappool import StateConnector
+    from services.ldappool import MaxConnectionReachedError
 
 
 def _bind(self, who='', cred='', **kw):

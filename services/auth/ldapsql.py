@@ -48,7 +48,7 @@ from sqlalchemy.sql import select, insert, update, and_
 
 from services.util import BackendError, ssha
 from services.auth import NodeAttributionError
-from services.auth.ldapconnection import ConnectionManager, StateConnector
+from services.ldappool import ConnectionManager, StateConnector
 from services.auth.resetcode import ResetCodeManager
 from services import logger
 

@@ -42,7 +42,7 @@ from sqlalchemy.exc import OperationalError
 
 try:
     import ldap
-    from services.auth.ldapconnection import StateConnector
+    from services.ldappool import StateConnector
     from services.auth.ldapsql import LDAPAuth
     LDAP = True
 except ImportError:
