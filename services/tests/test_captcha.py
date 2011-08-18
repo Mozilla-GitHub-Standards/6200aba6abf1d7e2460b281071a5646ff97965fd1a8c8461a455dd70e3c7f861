@@ -50,7 +50,8 @@ class TestCaptcha(unittest.TestCase):
 
     def test_captcha(self):
         key = 'foobarbaz'
-        config = {'use': True, 'private_key': 'a', 'public_key': key}
+        config = {'use': True, 'private_key': 'a', 'public_key': key,
+                  'override': 'test'}
 
         if _NO_CAPTCHA_LIB:
             self.assertRaises(ImportError, ServicesCaptcha, config)
@@ -69,3 +70,10 @@ class TestCaptcha(unittest.TestCase):
         self.assertFalse(captcha.check(req))
 
         self.assertTrue(key in captcha.form())
+
+        req.headers['X-Captcha-Override'] = 'test'
+        self.assertTrue(captcha.check(req))
+
+        req.headers['X-Captcha-Override'] = 'test2'
+        self.assertFalse(captcha.check(req))
+

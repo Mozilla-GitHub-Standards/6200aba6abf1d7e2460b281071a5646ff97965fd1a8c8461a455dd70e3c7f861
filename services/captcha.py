@@ -49,6 +49,7 @@ class ServicesCaptcha(object):
         if _NO_CAPTCHA_LIB:
             raise ImportError('Recaptcha lib is not installed')
         self.use = config.get('use', False)
+        self.override = config.get('override')
         self.private_key = config.get('private_key')
         self.public_key = config.get('public_key')
         self.use_ssl = config.get('use_ssl', True)
@@ -60,6 +61,11 @@ class ServicesCaptcha(object):
     def check(self, request):
         # check if captcha info are provided
         if not self.use:
+            return True
+
+        # check if we bypass it
+        if (self.override and
+            request.headers.get('X-Captcha-Override') == self.override):
             return True
 
         challenge = request.params.get('recaptcha_challenge_field')
