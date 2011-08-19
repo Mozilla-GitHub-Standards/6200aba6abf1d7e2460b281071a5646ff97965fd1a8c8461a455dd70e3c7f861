@@ -1,4 +1,5 @@
-# This change is required when you move your auth configuration (for server-reg # or server-core) from auth.sql to user.sql
+# This change is required when you move your auth configuration (for server-reg
+# or server-core) from auth.sql to user.sql
 
 
 create table users_new (
