@@ -57,6 +57,7 @@ import urllib2
 from urlparse import urlparse, urlunparse
 from decimal import Decimal, InvalidOperation
 import time
+import warnings
 
 from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
@@ -71,6 +72,20 @@ from services.exceptions import BackendError, BackendTimeoutError  # NOQA
 random.seed()
 _RE_CODE = re.compile('[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}')
 
+
+def function_moved(new_loc):
+    """This is a decorator that will emit a warning that a function has been
+    moved elsewhere"""
+    def arg_wrapper(func):
+        def moved_function(*args, **kwargs):
+            warnings.warn("%s has been moved to %s" % (func.__name__, new_loc),
+                          category=DeprecationWarning, stacklevel=2)
+            moved_function.__name__ = func.__name__
+            moved_function.__doc__ = func.__doc__
+            moved_function.__dict__.update(func.__dict__)
+            return func(*args, **kwargs)
+        return moved_function
+    return arg_wrapper
 
 def randchar(chars=string.digits + string.letters):
     """Generates a random char using urandom.
@@ -467,18 +482,16 @@ def email_to_idn(addr):
     prefix, suffix = addr.split('@', 1)
     return "%s@%s" % (prefix.encode('idna'), suffix.encode('idna'))
 
-
+@function_moved('user.extract_username')
 def extract_username(username):
     """Extracts the user name.
 
     Takes the username and if it is an email address, munges it down
     to the corresponding 32-character username
     """
-    if '@' not in username:
-        return username
-    username = email_to_idn(username).lower()
-    hashed = sha1(username).digest()
-    return base64.b32encode(hashed).lower()
+    #migration interstitials
+    from services.user import extract_username as extract_username_migrated
+    return extract_username_migrated(username)
 
 
 class CatchErrorMiddleware(object):

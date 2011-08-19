@@ -43,9 +43,10 @@ import socket
 import StringIO
 import sys
 import smtplib
+import warnings
 from email import message_from_string
 
-from services.util import (convert_config, bigint2time,
+from services.util import (function_moved, convert_config, bigint2time,
                            time2bigint, valid_email, batch,
                            validate_password, ssha, ssha256,
                            valid_password, json_response,
@@ -112,6 +113,17 @@ class TestUtil(unittest.TestCase):
             return res
 
         raise ValueError(url)
+
+    def test_function_move(self):
+        @function_moved('foobar')
+        def dummy():
+            return 1
+
+        with warnings.catch_warnings(record=True) as w:
+            result = dummy()
+            self.assertEqual(result, 1)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("has been moved to foobar" in str(w[-1].message))
 
     def test_convert_config(self):
         config = {'one': '1', 'two': 'bla', 'three': 'false'}
