@@ -129,7 +129,7 @@ class ResetCodeSQL(ResetCode):
         if res.rowcount != 1:
             logger.debug('Unable to add a new reset code in the'
                          ' reset_code table')
-            return None  # XXX see if appropriate
+            raise BackendError()
 
         return code
 

@@ -82,7 +82,7 @@ class TestResetCodeManager(unittest.TestCase):
         self._tests(load_and_configure(config))
 
     def test_reset_code_memcache(self):
-        if check_memcache is False:
+        if check_memcache() is False:
             raise SkipTest()
 
         config = {'backend':
