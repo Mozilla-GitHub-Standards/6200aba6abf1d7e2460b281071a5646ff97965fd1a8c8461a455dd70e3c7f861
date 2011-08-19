@@ -38,7 +38,43 @@
 """
 
 import abc
+import binascii
+import base64
+from hashlib import sha1
+
 from services.pluginreg import PluginRegistry
+from services.util import email_to_idn
+
+def extract_username(username):
+    """Extracts the user name.
+
+    Takes the username and if it is an email address, munges it down
+    to the corresponding 32-character username
+    """
+    if '@' not in username:
+        return username
+    username = email_to_idn(username).lower()
+    hashed = sha1(username).digest()
+    return base64.b32encode(hashed).lower()
+
+def get_basic_auth(request):
+    """
+    Takes a request object and extracts a username and password out of
+    the basic-auth header
+    """
+    auth = request.environ.get('HTTP_AUTHORIZATION')
+    if auth is None or not auth.startswith('Basic '):
+        return (False, False)
+
+    auth = auth[len('Basic '):].strip()
+    try:
+        # Split in such a way as to preserve
+        # passwords that contain ':'.
+        user_name, password = base64.decodestring(auth).split(':', 1)
+    except (binascii.Error, ValueError):
+        raise ValueError()
+    password = password.decode('utf8')
+    return (extract_username(user_name), password)
 
 
 class NoEmailError(Exception):

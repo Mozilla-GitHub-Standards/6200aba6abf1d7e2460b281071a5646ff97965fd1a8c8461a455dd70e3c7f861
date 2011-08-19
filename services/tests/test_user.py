@@ -35,8 +35,9 @@
 #
 # ***** END LICENSE BLOCK *****
 import unittest
+import base64
 
-from services.auth import User
+from services.user import User, get_basic_auth, extract_username
 from services.pluginreg import load_and_configure
 from services.respcodes import ERROR_INVALID_WRITE
 
@@ -55,6 +56,13 @@ sreg_config = {'backend': 'services.user.sreg.SregUser',
                'sreg_location': 'localhost',
                'sreg_path': '',
                'sreg_scheme': 'http'}
+
+
+class Request(object):
+
+    def __init__(self, path_info, environ):
+        self.path_info = path_info
+        self.environ = environ
 
 
 class TestUser(unittest.TestCase):
@@ -208,6 +216,37 @@ class TestUser(unittest.TestCase):
 
         self.assertFalse(mgr.create_user('user1', 'password1',
                                          'test@mozilla.com'))
+
+    def test_get_basic_auth(self):
+        token1 = 'Basic ' + base64.b64encode('tarek:tarek')
+        token2 = 'Basic ' + base64.b64encode('tarektarek')
+        token3 = 'Basic' + base64.b64encode('tarek:tarek')
+
+        r1 = Request('/foo', {'HTTP_AUTHORIZATION': token1})
+        username, password = get_basic_auth(r1)
+        self.assertEquals(username, 'tarek')
+        self.assertEquals(password, 'tarek')
+
+        self.assertRaises(ValueError, get_basic_auth, Request('/foo',
+                                             {'HTTP_AUTHORIZATION': token2}))
+
+        username, password = get_basic_auth(Request('/foo',
+                                             {'HTTP_AUTHORIZATION': token3}))
+        self.assertEquals(username, False)
+        self.assertEquals(password, False)
+
+    def test_extract_username(self):
+        self.assertEquals(extract_username('username'), 'username')
+        self.assertEquals(extract_username('test@test.com'),
+                          'u2wqblarhim5su7pxemcbwdyryrghmuk')
+        # test unicode/punycode (straight UTF8 and urlencoded)
+        self.assertEquals(extract_username('Fran%c3%a7ios@valid.test'),
+                          'ym3nccfhvptfrhn7nkhhyvzgf2yl7r5y')  # proper char
+        self.assertRaises(UnicodeError, extract_username,
+                          'bo%EF%bb@badcharacter.test')        # bad utf-8 char
+        self.assertRaises(UnicodeError, extract_username,
+                          'bo%ef%bb%bc@badbidiuser.test')      # invalid BIDI
+
 
 
 def test_suite():
