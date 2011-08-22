@@ -62,7 +62,7 @@ class Users(_Base):
     accountStatus = Column(Integer, default=1)
     mail = Column(String(64))
     mailVerified = Column(Integer, default=0)
-    syncNode = Column(String(128))
+    syncNode = Column(String(64))
 
 users = Users.__table__
 tables.append(users)
