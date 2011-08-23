@@ -87,6 +87,7 @@ def function_moved(new_loc):
         return moved_function
     return arg_wrapper
 
+
 def randchar(chars=string.digits + string.letters):
     """Generates a random char using urandom.
 
@@ -481,6 +482,7 @@ def email_to_idn(addr):
         return addr
     prefix, suffix = addr.split('@', 1)
     return "%s@%s" % (prefix.encode('idna'), suffix.encode('idna'))
+
 
 @function_moved('user.extract_username')
 def extract_username(username):
