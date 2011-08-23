@@ -37,9 +37,15 @@
 import unittest
 import base64
 
+from webob import Response
+from webob.exc import HTTPServiceUnavailable
+
 from services.user import User, get_basic_auth, extract_username
 from services.pluginreg import load_and_configure
 from services.respcodes import ERROR_INVALID_WRITE
+from services.tests.support import CAN_MOCK_WSGI, mock_wsgi
+from services.exceptions import BackendError
+
 
 memory_config = {'backend': 'services.user.memory.MemoryUser'}
 sql_config = {'backend': 'services.user.sql.SQLUser',
@@ -172,18 +178,18 @@ class TestUser(unittest.TestCase):
             mgr = load_and_configure(ldap_config)
             mgr.authenticate_user(user1, 'password1')
         except Exception:
-            #we probably don't have an LDAP configured here. Don't test
+            # we probably don't have an LDAP configured here. Don't test
             return
 
         self._tests(mgr)
 
     def test_user_sreg(self):
+        if not CAN_MOCK_WSGI:
+            return
         try:
-            from webob import Response
-            import wsgi_intercept
-            from wsgi_intercept.urllib2_intercept import install_opener
-            install_opener()
+            import ldap  # NOQA
         except ImportError:
+            # we probably don't have an LDAP configured here. Don't test
             return
 
         def _fake_response():
@@ -200,22 +206,20 @@ class TestUser(unittest.TestCase):
 
         mgr = load_and_configure(sreg_config)
 
-        wsgi_intercept.add_wsgi_intercept('localhost', 80, _username_response)
+        with mock_wsgi(_username_response):
+            user1 = mgr.create_user('user1', 'password1', 'test@mozilla.com')
 
-        user1 = mgr.create_user('user1', 'password1', 'test@mozilla.com')
+            self.assertEquals(user1['username'], 'user1')
 
-        self.assertEquals(user1['username'], 'user1')
+        with mock_wsgi(_fake_response):
+            self.assertTrue(mgr.admin_update_password(user1, 'newpass',
+                            'key'))
 
-        wsgi_intercept.add_wsgi_intercept('localhost', 80, _fake_response)
-        self.assertTrue(mgr.admin_update_password(user1, 'newpass', 'key'))
+            self.assertTrue(mgr.delete_user(user1, 'password1'))
 
-        self.assertTrue(mgr.delete_user(user1, 'password1'))
-
-        wsgi_intercept.add_wsgi_intercept('localhost', 80,
-                                          _user_exists_response)
-
-        self.assertFalse(mgr.create_user('user1', 'password1',
-                                         'test@mozilla.com'))
+        with mock_wsgi(_user_exists_response):
+            self.assertFalse(mgr.create_user('user1', 'password1',
+                                             'test@mozilla.com'))
 
     def test_get_basic_auth(self):
         token1 = 'Basic ' + base64.b64encode('tarek:tarek')
@@ -247,6 +251,58 @@ class TestUser(unittest.TestCase):
         self.assertRaises(UnicodeError, extract_username,
                           'bo%ef%bb%bc@badbidiuser.test')      # invalid BIDI
 
+    def test_backenderrors(self):
+        # this test makes sure all BackendErrors in user/sreg
+        # give useful info in the TB
+        if not CAN_MOCK_WSGI:
+            return
+
+        mgr = load_and_configure(sreg_config)
+
+        def _kill():
+            return HTTPServiceUnavailable()
+
+        tarek = User('tarek')
+
+        with mock_wsgi(_kill):
+            try:
+                mgr.delete_user(tarek, 'pass')
+            except BackendError, err:
+                res = str(err)
+
+        wanted = ('BackendError on http://localhost/tarek\n\nUnable to delete'
+                  ' the user via sreg. Received body:\n503 Service '
+                  'Unavailable\n\nThe server is currently unavailable. '
+                  'Please try again at a later time.\n\n   \nReceived status:'
+                  ' 503')
+        self.assertEqual(res, wanted)
+
+        with mock_wsgi(_kill):
+            try:
+                mgr.create_user('tarek', 'pass', 'mail')
+            except BackendError, err:
+                res = str(err)
+
+        wanted = ('BackendError on http://localhost/tarek\n\nUnable to create'
+                  ' the user via sreg. Received body:\n503 Service '
+                  'Unavailable\n\nThe server is currently unavailable. '
+                  'Please try again at a later time.\n\n   \nReceived status:'
+                  ' 503')
+
+        self.assertEqual(res, wanted)
+
+        with mock_wsgi(_kill):
+            try:
+                mgr.admin_update_password(tarek, 'pass', 'key')
+            except BackendError, err:
+                res = str(err)
+
+        wanted = ('BackendError on http://localhost/tarek/password\n\nUnable '
+                  'to change the user password via sreg. Received body:\n503 '
+                  'Service Unavailable\n\nThe server is currently '
+                  'unavailable. Please try again at a later time.\n\n   '
+                  '\nReceived status: 503')
+        self.assertEqual(res, wanted)
 
 
 def test_suite():

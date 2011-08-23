@@ -49,12 +49,14 @@ def _resolve_name(name):
     parts = name.split('.')
     cursor = len(parts)
     module_name = parts[:cursor]
+    last_exc = None
 
     while cursor > 0:
         try:
             ret = __import__('.'.join(module_name))
             break
-        except ImportError:
+        except ImportError, exc:
+            last_exc = exc
             if cursor == 0:
                 raise
             cursor -= 1
@@ -64,9 +66,13 @@ def _resolve_name(name):
         try:
             ret = getattr(ret, part)
         except AttributeError:
+            if last_exc is not None:
+                raise last_exc
             raise ImportError(name)
 
     if ret is None:
+        if last_exc is not None:
+            raise last_exc
         raise ImportError(name)
 
     return ret
@@ -103,10 +109,12 @@ def load_and_configure(config, section=None, cls_param='backend'):
     backend = None
     try:
         backend = _resolve_name(backend_name)
-    except ImportError:
+    except ImportError, exc:
         msg = ('Unknown fully qualified name for the backend:'
                ' %r') % backend_name
+        msg += ', or error in the module: %s' % str(exc)
         raise KeyError(msg)
+
     if backend is None:
         raise KeyError('No plugin registered for "%s"' % backend_name)
 

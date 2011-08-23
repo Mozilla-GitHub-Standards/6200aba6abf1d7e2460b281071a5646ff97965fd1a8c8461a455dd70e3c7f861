@@ -264,3 +264,22 @@ def capture_logs(logger='syncserver', level=logging.ERROR):
 
         # remove the handler
         logger.removeHandler(ch)
+
+
+try:
+    import wsgi_intercept  # NOQA
+    CAN_MOCK_WSGI = True
+except ImportError:
+    CAN_MOCK_WSGI = False
+
+
+@contextlib.contextmanager
+def mock_wsgi(callable=None, server='localhost', port=80):
+    from wsgi_intercept import add_wsgi_intercept as add
+    from wsgi_intercept import remove_wsgi_intercept as remove
+
+    add(server, port, callable)
+    try:
+        yield
+    finally:
+        remove(server, port)

@@ -40,11 +40,12 @@ import simplejson as json
 import urlparse
 
 from services import logger
-from services.util import BackendError, get_url
+from services.util import get_url
 from services.user.mozilla_ldap import LDAPUser
 from services.user import User
 from services.resetcodes import InvalidCodeError
 from services.respcodes import ERROR_INVALID_WRITE, ERROR_INVALID_RESET_CODE
+from services.exceptions import BackendError
 
 
 class SregUser(LDAPUser):
@@ -67,7 +68,10 @@ class SregUser(LDAPUser):
         if status != 200:
             if body == ERROR_INVALID_WRITE:
                 return False
-            raise BackendError()
+            msg = 'Unable to create the user via sreg. '
+            msg += 'Received body:\n%s\n' % str(body)
+            msg += 'Received status: %d' % status
+            raise BackendError(msg, server=url)
 
         # the result is the username on success
         if body == username:
@@ -104,7 +108,10 @@ class SregUser(LDAPUser):
             if body == ERROR_INVALID_RESET_CODE:
                 raise InvalidCodeError()
 
-        raise BackendError()
+        msg = 'Unable to change the user password via sreg. '
+        msg += 'Received body:\n%s\n' % str(body)
+        msg += 'Received status: %d' % status
+        raise BackendError(msg, server=url)
 
     def delete_user(self, user, password=None):
         """Deletes the user
@@ -127,7 +134,10 @@ class SregUser(LDAPUser):
         url = self._generate_url(username)
         status, body = self._proxy('DELETE', url, payload)
         if status != 200:
-            raise BackendError()
+            msg = 'Unable to delete the user via sreg. '
+            msg += 'Received body:\n%s\n' % str(body)
+            msg += 'Received status: %d' % status
+            raise BackendError(msg, server=url)
 
         return body == 0
 
