@@ -38,6 +38,8 @@
 Base plugin class with registration mechanism and configuration reading.
 """
 import abc
+import copy
+
 from services.util import filter_params
 
 
@@ -88,7 +90,7 @@ def load_and_configure(config, section=None, cls_param='backend'):
         An instanciated object of the requested class if the change was
         successful, False otherwise
     """
-    params = config
+    params = copy.copy(config)
     if section:
         params = filter_params(section, params)
 

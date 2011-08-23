@@ -34,10 +34,9 @@
 #
 # ***** END LICENSE BLOCK *****
 import unittest
-from services.pluginreg import PluginRegistry, load_and_configure
-
 import abc
-from services.pluginreg import PluginRegistry
+
+from services.pluginreg import PluginRegistry, load_and_configure
 
 
 class ClassInterface(PluginRegistry):
@@ -46,9 +45,11 @@ class ClassInterface(PluginRegistry):
     def foo(self):
         pass
 
+
 class ImplementsCorrectly(object):
     def foo(self):
         pass
+
 
 class ImplementsBadly(object):
     def bar(self):
@@ -107,6 +108,16 @@ class TestPlugin(unittest.TestCase):
         self.assertRaises(TypeError, load_and_configure, bad_interface)
         self.assertRaises(ImportError, load_and_configure, missing_interface)
 
+    def test_invariant(self):
+        from services.tests.test_pluginreg import Dummy
+        config = {'backend': 'services.tests.test_pluginreg.Dummy',
+                  'foo': 'bar'}
+        obj = load_and_configure(config)
+        self.assertTrue(isinstance(obj, Dummy))
+
+        # second call, same config dict, should work
+        obj = load_and_configure(config)
+        self.assertTrue(isinstance(obj, Dummy))
 
 
 def test_suite():
