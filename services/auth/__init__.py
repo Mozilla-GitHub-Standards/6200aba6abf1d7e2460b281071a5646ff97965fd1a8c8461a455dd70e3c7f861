@@ -36,7 +36,10 @@
 """ Authentication tool
 """
 import abc
+
 from services.pluginreg import PluginRegistry
+from services.exceptions import NodeAttributionError, NoEmailError  # NOQA
+from services.exceptions import InvalidCodeError  # NOQA
 
 
 class User(dict):
@@ -44,26 +47,6 @@ class User(dict):
     A holding class for user data. One day it might be more, so better
     to put a class wrapper around it
     """
-    pass
-
-
-class NodeAttributionError(Exception):
-    """Raised when the node attribution fails."""
-    pass
-
-
-class NoEmailError(Exception):
-    """Raised when we need the user's email address and it doesn't exist."""
-    pass
-
-
-class InvalidCodeError(Exception):
-    """Raised when we need the user's reset code is incorrect."""
-    pass
-
-
-class NoEmailError(Exception):
-    """Raised when we need the user's email address and it doesn't exist."""
     pass
 
 

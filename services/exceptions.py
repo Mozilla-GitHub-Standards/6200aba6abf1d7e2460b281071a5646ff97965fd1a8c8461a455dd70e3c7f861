@@ -35,6 +35,8 @@
 # ***** END LICENSE BLOCK *****
 """ Exceptions
 """
+from ConfigParser import Error
+
 
 _TMP = """\
 %s on %s
@@ -62,3 +64,36 @@ class BackendError(Exception):
 class BackendTimeoutError(BackendError):
     """Raised when the backend times out."""
     pass
+
+
+class MaxConnectionReachedError(Exception):
+    """Raised by ldappool"""
+    pass
+
+
+class NoEmailError(Exception):
+    """Raised when we need the user's email address and it doesn't exist."""
+    pass
+
+
+class NoUserIDError(Exception):
+    """Raised when there's no userID fails."""
+    pass
+
+
+class NodeAttributionError(Exception):
+    """Raised when the node attribution fails."""
+    pass
+
+
+class InvalidCodeError(Exception):
+    """Raised when we need the user's reset code is incorrect."""
+    pass
+
+
+class EnvironmentNotFoundError(Error):
+    """Raised when an environment variable is not found"""
+
+    def __init__(self, varname):
+        Error.__init__(self, 'Variable not found %r' % varname)
+        self.varname = varname

@@ -41,11 +41,8 @@ from threading import RLock
 
 from ldap.ldapobject import ReconnectLDAPObject
 import ldap
-from services.util import BackendError, BackendTimeoutError
-
-
-class MaxConnectionReachedError(Exception):
-    pass
+from services.exceptions import (BackendError, BackendTimeoutError,
+                                 MaxConnectionReachedError)
 
 
 class StateConnector(ReconnectLDAPObject):

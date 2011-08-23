@@ -36,7 +36,6 @@
 # ***** END LICENSE BLOCK *****
 """ Base interface for user functions such as auth and account admin
 """
-
 import abc
 import binascii
 import base64
@@ -44,6 +43,8 @@ from hashlib import sha1
 
 from services.pluginreg import PluginRegistry
 from services.util import email_to_idn
+from services.exceptions import NoEmailError, NoUserIDError  # NOQA
+
 
 def extract_username(username):
     """Extracts the user name.
@@ -56,6 +57,7 @@ def extract_username(username):
     username = email_to_idn(username).lower()
     hashed = sha1(username).digest()
     return base64.b32encode(hashed).lower()
+
 
 def get_basic_auth(request):
     """
@@ -75,16 +77,6 @@ def get_basic_auth(request):
         raise ValueError()
     password = password.decode('utf8')
     return (extract_username(user_name), password)
-
-
-class NoEmailError(Exception):
-    """Raised when we need the user's email address and it doesn't exist."""
-    pass
-
-
-class NoUserIDError(Exception):
-    """Raised when there's no userID fails."""
-    pass
 
 
 class User(dict):

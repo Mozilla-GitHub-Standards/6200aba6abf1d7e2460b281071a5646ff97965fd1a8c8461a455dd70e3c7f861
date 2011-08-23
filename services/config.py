@@ -39,18 +39,12 @@ https://wiki.mozilla.org/index.php?title=Services/Sync/Server/GlobalConfFile
 """
 import re
 import os
-from ConfigParser import RawConfigParser, Error
+from ConfigParser import RawConfigParser
+from services.exceptions import EnvironmentNotFoundError
+
 
 _IS_NUMBER = re.compile('^-?[0-9].*')
 _IS_ENV_VAR = re.compile('\$\{(\w.*)?\}')
-
-
-class EnvironmentNotFoundError(Error):
-    """Raised when an environment variable is not found"""
-
-    def __init__(self, varname):
-        Error.__init__(self, 'Variable not found %r' % varname)
-        self.varname = varname
 
 
 def convert(value):
