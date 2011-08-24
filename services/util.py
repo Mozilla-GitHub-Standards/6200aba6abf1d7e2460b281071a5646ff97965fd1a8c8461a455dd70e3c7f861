@@ -73,17 +73,25 @@ random.seed()
 _RE_CODE = re.compile('[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}')
 
 
-def function_moved(new_loc):
+def function_moved(moved_to, follow_redirect=True):
     """This is a decorator that will emit a warning that a function has been
-    moved elsewhere"""
+    moved elsewhere
+
+    Arguments:
+        moved_to: the string representing the new function name
+        follow_redirect: if true, attempts to resolve the function specified in
+        moved_to and calls that instead of the original function
+    """
     def arg_wrapper(func):
         def moved_function(*args, **kwargs):
-            warnings.warn("%s has been moved to %s" % (func.__name__, new_loc),
+            from services.pluginreg import _resolve_name
+            warnings.warn("%s has moved to %s" % (func.__name__, moved_to),
                           category=DeprecationWarning, stacklevel=2)
-            moved_function.__name__ = func.__name__
-            moved_function.__doc__ = func.__doc__
-            moved_function.__dict__.update(func.__dict__)
-            return func(*args, **kwargs)
+            if follow_redirect:
+                new_func = _resolve_name(moved_to)
+                return new_func(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
         return moved_function
     return arg_wrapper
 
@@ -484,17 +492,14 @@ def email_to_idn(addr):
     return "%s@%s" % (prefix.encode('idna'), suffix.encode('idna'))
 
 
-@function_moved('user.extract_username')
+@function_moved('services.user.extract_username')
 def extract_username(username):
     """Extracts the user name.
 
     Takes the username and if it is an email address, munges it down
     to the corresponding 32-character username
     """
-    #migration interstitials
-    from services.user import extract_username as extract_username_migrated
-    return extract_username_migrated(username)
-
+    pass
 
 class CatchErrorMiddleware(object):
     """Middleware that catches error, log them and return a 500"""

@@ -65,6 +65,12 @@ thing = ok
 """
 
 
+def return2():
+    return 2
+
+def returnNum(num):
+    return num
+
 class FakeResult(object):
     headers = {}
     body = '{}'
@@ -115,15 +121,42 @@ class TestUtil(unittest.TestCase):
         raise ValueError(url)
 
     def test_function_move(self):
-        @function_moved('foobar')
-        def dummy():
+        @function_moved('services.tests.test_util.return2')
+        def return1():
             return 1
 
+        @function_moved('services.tests.test_util.return2',
+                        follow_redirect=False)
+        def return3():
+            return 3
+
+        @function_moved('foo.bar.baz', follow_redirect=True)
+        def bad_redirect():
+            pass
+
+        @function_moved('services.tests.test_util.returnNum')
+        def new_function_profile():
+            pass
+
+        @function_moved('services.tests.test_util.returnNum', False)
+        def return4():
+            return returnNum(4)
+
         with warnings.catch_warnings(record=True) as w:
-            result = dummy()
-            self.assertEqual(result, 1)
+            result = return1()
+            self.assertEqual(result, 2)
             self.assertEqual(len(w), 1)
-            self.assertTrue("has been moved to foobar" in str(w[-1].message))
+            self.assertTrue("moved to services.tests.test_util.return2"
+                            in str(w[-1].message))
+
+            result = return3()
+            self.assertEqual(result, 3)
+            self.assertTrue("moved to services.tests.test_util.return2"
+                            in str(w[-1].message))
+
+            self.assertRaises(ImportError, bad_redirect)
+            self.assertRaises(TypeError, new_function_profile)
+            self.assertEqual(return4(), 4)
 
     def test_convert_config(self):
         config = {'one': '1', 'two': 'bla', 'three': 'false'}
