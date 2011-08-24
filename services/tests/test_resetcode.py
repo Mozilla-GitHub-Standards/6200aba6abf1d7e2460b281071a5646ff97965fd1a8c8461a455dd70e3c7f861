@@ -45,6 +45,7 @@ from services.auth import NoEmailError
 from services.resetcodes import AlreadySentError
 from services.respcodes import ERROR_NO_EMAIL_ADDRESS
 from services.tests.support import check_memcache
+from services.exceptions import BackendError
 
 from nose.plugins.skip import SkipTest
 
@@ -79,7 +80,23 @@ class TestResetCodeManager(unittest.TestCase):
                   'sqluri': 'sqlite:///:memory:',
                   'create_tables': True,
                   'expiration': 1}
-        self._tests(load_and_configure(config))
+        storage = load_and_configure(config)
+        self._tests(storage)
+
+        def _no_result(*args, **kwargs):
+            class NoRows(object):
+                def __init__(self):
+                    self.rowcount = 0
+            return NoRows()
+
+        import services.resetcodes.rc_sql as rc_sql
+        old_safe = rc_sql.safe_execute
+        rc_sql.safe_execute = _no_result
+        user = User()
+        user['userid'] = 1
+        self.assertRaises(BackendError, storage.generate_reset_code,
+                          user, True)
+        rc_sql.safe_execute = old_safe
 
     def test_reset_code_memcache(self):
         if check_memcache() is False:

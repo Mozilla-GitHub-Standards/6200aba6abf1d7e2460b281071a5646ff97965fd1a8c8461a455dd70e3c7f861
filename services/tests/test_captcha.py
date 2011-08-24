@@ -76,4 +76,3 @@ class TestCaptcha(unittest.TestCase):
 
         req.headers['X-Captcha-Override'] = 'test2'
         self.assertFalse(captcha.check(req))
-

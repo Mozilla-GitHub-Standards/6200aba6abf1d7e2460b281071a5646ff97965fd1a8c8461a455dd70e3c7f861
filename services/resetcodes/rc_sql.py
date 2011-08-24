@@ -48,7 +48,7 @@ from sqlalchemy.sql import bindparam, select, insert, delete, and_
 
 from services.util import safe_execute
 from services.resetcodes import ResetCode
-from services import logger
+from services.exceptions import BackendError
 
 
 _Base = declarative_base()
@@ -127,9 +127,7 @@ class ResetCodeSQL(ResetCode):
         res = safe_execute(self._engine, query)
 
         if res.rowcount != 1:
-            logger.debug('Unable to add a new reset code in the'
-                         ' reset_code table')
-            raise BackendError()
+            raise BackendError('adding a reset code to the reset table failed')
 
         return code
 

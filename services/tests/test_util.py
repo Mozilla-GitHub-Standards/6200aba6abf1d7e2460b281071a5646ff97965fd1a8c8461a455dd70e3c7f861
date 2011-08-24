@@ -68,8 +68,10 @@ thing = ok
 def return2():
     return 2
 
+
 def returnNum(num):
     return num
+
 
 class FakeResult(object):
     headers = {}

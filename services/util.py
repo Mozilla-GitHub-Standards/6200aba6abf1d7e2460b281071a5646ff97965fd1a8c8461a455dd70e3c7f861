@@ -501,6 +501,7 @@ def extract_username(username):
     """
     pass
 
+
 class CatchErrorMiddleware(object):
     """Middleware that catches error, log them and return a 500"""
     def __init__(self, app, logger_name='root', hook=None,
