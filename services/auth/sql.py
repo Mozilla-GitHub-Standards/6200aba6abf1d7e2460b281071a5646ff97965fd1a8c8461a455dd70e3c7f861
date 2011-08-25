@@ -49,6 +49,7 @@ from services.util import (validate_password, ssha256,
                            generate_reset_code, safe_execute)
 
 from services.auth.resetcode import ResetCodeManager
+from services.resetcodes import ResetCode
 
 # sharing the same table than the sql storage
 from services.auth.sqlmappers import users
@@ -274,7 +275,9 @@ class SQLAuth(ResetCodeManager):
         return res.reset
 
     def _set_reset_code(self, user_id):
-        code, expiration = generate_reset_code()
+        rc = ResetCode()
+        code = rc._generate_reset_code()
+        expiration = datetime.datetime.now() + datetime.timedelta(hours=6)
         query = update(users).values(reset=code, reset_expiration=expiration)
         res = safe_execute(self._engine, query.where(users.c.id == user_id))
         if res.rowcount != 1:
