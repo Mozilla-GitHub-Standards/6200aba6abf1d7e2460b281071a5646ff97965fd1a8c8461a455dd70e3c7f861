@@ -42,9 +42,8 @@ import base64
 from webob.exc import HTTPUnauthorized, HTTPBadRequest
 from cef import log_cef
 
-from services.util import extract_username
 from services.pluginreg import load_and_configure
-from services.user import User
+from services.user import User, extract_username
 
 
 class Authentication(object):

@@ -51,7 +51,7 @@ from services.util import (function_moved, convert_config, bigint2time,
                            validate_password, ssha, ssha256,
                            valid_password, json_response,
                            newlines_response, whoisi_response, text_response,
-                           extract_username, get_url, proxy,
+                           get_url, proxy,
                            get_source_ip, CatchErrorMiddleware, round_time,
                            send_email, extract_node)
 
@@ -246,18 +246,6 @@ class TestUtil(unittest.TestCase):
         resp = json_response(data)
         self.assertEquals(resp.body, '{"some": "data"}')
         self.assertEquals(resp.content_type, 'application/json')
-
-    def test_extract_username(self):
-        self.assertEquals(extract_username('username'), 'username')
-        self.assertEquals(extract_username('test@test.com'),
-                          'u2wqblarhim5su7pxemcbwdyryrghmuk')
-        # test unicode/punycode (straight UTF8 and urlencoded)
-        self.assertEquals(extract_username('Fran%c3%a7ios@valid.test'),
-                          'ym3nccfhvptfrhn7nkhhyvzgf2yl7r5y')  # proper char
-        self.assertRaises(UnicodeError, extract_username,
-                          'bo%EF%bb@badcharacter.test')        # bad utf-8 char
-        self.assertRaises(UnicodeError, extract_username,
-                          'bo%ef%bb%bc@badbidiuser.test')      # invalid BIDI
 
     def test_get_url(self):
 
