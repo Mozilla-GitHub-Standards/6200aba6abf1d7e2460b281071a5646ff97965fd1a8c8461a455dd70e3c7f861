@@ -372,32 +372,27 @@ def batch(iterable, size=100):
         yield group
 
 
+@function_moved('services.resetcodes.ResetCode._generate_reset_code', False)
 def generate_reset_code():
     """Generates a reset code
 
     Returns:
         reset code, expiration date
     """
-    chars = string.ascii_uppercase + string.digits
+    from services.resetcodes import ResetCode
+    rc = ResetCode()
 
-    def _4chars():
-        return ''.join([randchar(chars) for i in range(4)])
-
-    code = '-'.join([_4chars() for i in range(4)])
+    code = rc._generate_reset_code()
     expiration = datetime.datetime.now() + datetime.timedelta(hours=6)
     return code, expiration
 
 
+@function_moved('services.resetcodes.ResetCode._check_reset_code', False)
 def check_reset_code(code):
-    """Verify a reset code
-
-    Args:
-        code: reset code
-
-    Returns:
-        True or False
-    """
-    return _RE_CODE.match(code) is not None
+    from services.resetcodes import ResetCode
+    rc = ResetCode()
+    return rc._check_reset_code
+    pass
 
 
 class HTTPJsonBadRequest(HTTPBadRequest):
@@ -455,11 +450,6 @@ def email_to_idn(addr):
 
 @function_moved('services.user.extract_username')
 def extract_username(username):
-    """Extracts the user name.
-
-    Takes the username and if it is an email address, munges it down
-    to the corresponding 32-character username
-    """
     pass
 
 

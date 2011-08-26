@@ -47,6 +47,7 @@ from sqlalchemy.sql import bindparam, select, insert, delete
 
 from services.util import generate_reset_code, check_reset_code, safe_execute
 from services import logger
+from services.resetcodes import ResetCode
 
 
 _Base = declarative_base()
@@ -75,6 +76,7 @@ class ResetCodeManager(object):
             reset_codes.metadata.bind = engine
             if create_tables:
                 reset_codes.create(checkfirst=True)
+        self.rc = ResetCode()
 
     #
     # Private methods
@@ -100,7 +102,8 @@ class ResetCodeManager(object):
         return res.reset
 
     def _set_reset_code(self, user_id):
-        code, expiration = generate_reset_code()
+        code = self.rc._generate_reset_code()
+        expiration = datetime.datetime.now() + datetime.timedelta(hours=6)
         query = delete(reset_codes).where(reset_codes.c.username == user_id)
         self._engine.execute(query)
 
@@ -129,7 +132,7 @@ class ResetCodeManager(object):
         return self._set_reset_code(user_id)
 
     def verify_reset_code(self, user_id, code):
-        if not check_reset_code(code):
+        if not self.rc._check_reset_code(code):
             return False
 
         stored_code = self._get_reset_code(user_id)
