@@ -40,7 +40,7 @@ import re
 import pprint
 import StringIO
 
-from services.util import html_response, text_response
+from services.formatters import html_response, text_response
 
 
 _DEBUG_TMPL = """

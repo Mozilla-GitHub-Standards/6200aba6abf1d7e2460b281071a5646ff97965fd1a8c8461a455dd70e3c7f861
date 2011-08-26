@@ -46,8 +46,7 @@ from email import message_from_string
 
 from services.util import (function_moved, bigint2time, time2bigint,
                            valid_email, batch, validate_password, ssha,
-                           ssha256, valid_password, json_response,
-                           newlines_response, whoisi_response, text_response,
+                           ssha256, valid_password,
                            get_url, proxy, get_source_ip, CatchErrorMiddleware,
                            round_time, send_email, extract_node)
 
@@ -191,27 +190,6 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(valid_password(u't' * 8, u't' * 8))
         self.assertTrue(valid_password(u'tarek', u't' * 8))
         self.assertFalse(valid_password(u'café' * 3, u'café' * 3))
-
-    def test_response_conversions(self):
-        data = {'some': 'data'}
-        resp = text_response(data)
-        self.assertEquals(resp.body, "{'some': 'data'}")
-        self.assertEquals(resp.content_type, 'text/plain')
-
-        data = "abc"
-        resp = whoisi_response(data)
-        self.assertEquals(resp.body,
-                '\x00\x00\x00\x03"a"\x00\x00\x00\x03"b"\x00\x00\x00\x03"c"')
-        self.assertEquals(resp.content_type, 'application/whoisi')
-
-        resp = newlines_response(data)
-        self.assertEquals(resp.body, '"a"\n"b"\n"c"\n')
-        self.assertEquals(resp.content_type, 'application/newlines')
-
-        data = {'some': 'data'}
-        resp = json_response(data)
-        self.assertEquals(resp.body, '{"some": "data"}')
-        self.assertEquals(resp.content_type, 'application/json')
 
     def test_get_url(self):
 

@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Toby Elliott (telliott@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,7 +44,6 @@ from hashlib import sha256, sha1, md5
 import base64
 import simplejson as json
 import itertools
-import struct
 from email.mime.text import MIMEText
 from email.header import Header
 from rfc822 import AddressList
@@ -108,60 +108,6 @@ def randchar(chars=string.digits + string.letters):
         return chars[pos % len(chars)]
     except NotImplementedError:
         return random.choice(chars)
-
-
-def text_response(data, **kw):
-    """Returns Response containing a plain text"""
-    return Response(str(data), content_type='text/plain', **kw)
-
-
-def json_response(data, **kw):
-    """Returns Response containing a json string"""
-    return Response(json.dumps(data, use_decimal=True),
-                               content_type='application/json', **kw)
-
-
-def html_response(data, **kw):
-    """Returns Response containing a plain text"""
-    return Response(str(data), content_type='text/html', **kw)
-
-
-def newlines_response(lines, **kw):
-    """Returns a Response object containing a newlines output."""
-    def _convert(line):
-        line = json.dumps(line, use_decimal=True).replace('\n', '\u000a')
-        return '%s\n' % line
-
-    data = [_convert(line) for line in lines]
-    return Response(''.join(data), content_type='application/newlines', **kw)
-
-
-def whoisi_response(lines, **kw):
-    """Returns a Response object containing a whoisi output."""
-
-    def _convert(line):
-        line = json.dumps(line, use_decimal=True)
-        size = struct.pack('!I', len(line))
-        return '%s%s' % (size, line)
-
-    data = [_convert(line) for line in lines]
-    return Response(''.join(data), content_type='application/whoisi', **kw)
-
-
-def convert_response(request, lines, **kw):
-    """Returns the response in the appropriate format, depending on the accept
-    request."""
-    content_type = request.accept.first_match(('application/json',
-                                               'application/newlines',
-                                               'application/whoisi'))
-
-    if content_type == 'application/newlines':
-        return newlines_response(lines, **kw)
-    elif content_type == 'application/whoisi':
-        return whoisi_response(lines, **kw)
-
-    # default response format is json
-    return json_response(lines, **kw)
 
 
 def time2bigint(value):
@@ -361,6 +307,7 @@ def valid_password(user_name, password):
     return user_name.lower().strip() != password.lower().strip()
 
 
+
 def batch(iterable, size=100):
     """Returns the given iterable split into batches, of size."""
     counter = itertools.count()
@@ -370,29 +317,6 @@ def batch(iterable, size=100):
 
     for key, group in itertools.groupby(iter(iterable), ticker):
         yield group
-
-
-@function_moved('services.resetcodes.ResetCode._generate_reset_code', False)
-def generate_reset_code():
-    """Generates a reset code
-
-    Returns:
-        reset code, expiration date
-    """
-    from services.resetcodes import ResetCode
-    rc = ResetCode()
-
-    code = rc._generate_reset_code()
-    expiration = datetime.datetime.now() + datetime.timedelta(hours=6)
-    return code, expiration
-
-
-@function_moved('services.resetcodes.ResetCode._check_reset_code', False)
-def check_reset_code(code):
-    from services.resetcodes import ResetCode
-    rc = ResetCode()
-    return rc._check_reset_code
-    pass
 
 
 class HTTPJsonBadRequest(HTTPBadRequest):
@@ -446,11 +370,6 @@ def email_to_idn(addr):
         return addr
     prefix, suffix = addr.split('@', 1)
     return "%s@%s" % (prefix.encode('idna'), suffix.encode('idna'))
-
-
-@function_moved('services.user.extract_username')
-def extract_username(username):
-    pass
 
 
 class CatchErrorMiddleware(object):
@@ -621,3 +540,61 @@ def extract_node(node):
     of any additional key-value pairs specified"""
     vals = node.split('<')
     return vals[0], dict([val.split('=', 1) for val in vals[1:]])
+
+
+@function_moved('services.user.extract_username')
+def extract_username(username):
+    pass
+
+
+@function_moved('services.formatters.text_response')
+def text_response(data, **kw):
+    pass
+
+
+@function_moved('services.formatters.json_response')
+def json_response(data, **kw):
+    pass
+
+
+@function_moved('services.formatters.html_response')
+def html_response(data, **kw):
+    pass
+
+
+@function_moved('services.formatters.newlines_response')
+def newlines_response(lines, **kw):
+    pass
+
+
+@function_moved('services.formatters.whoisi_response')
+def whoisi_response(lines, **kw):
+    pass
+
+
+@function_moved('services.formatters.convert_response')
+def convert_response(request, lines, **kw):
+    pass
+
+
+@function_moved('services.resetcodes.ResetCode._generate_reset_code', False)
+def generate_reset_code():
+    """Generates a reset code
+
+    Returns:
+        reset code, expiration date
+    """
+    from services.resetcodes import ResetCode
+    rc = ResetCode()
+
+    code = rc._generate_reset_code()
+    expiration = datetime.datetime.now() + datetime.timedelta(hours=6)
+    return code, expiration
+
+
+@function_moved('services.resetcodes.ResetCode._check_reset_code', False)
+def check_reset_code(code):
+    from services.resetcodes import ResetCode
+    rc = ResetCode()
+    return rc._check_reset_code
+    pass
