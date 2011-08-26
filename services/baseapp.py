@@ -51,9 +51,10 @@ from webob.dec import wsgify
 from webob.exc import HTTPNotFound, HTTPServiceUnavailable
 from webob import Response
 
-from services.util import (convert_config, CatchErrorMiddleware, round_time,
-                         BackendError, create_hash, HTTPJsonServiceUnavailable)
+from services.util import (CatchErrorMiddleware, round_time, BackendError,
+                           create_hash, HTTPJsonServiceUnavailable)
 from services import logger
+from services.config import Config
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
 from services.user import User
@@ -65,10 +66,13 @@ class SyncServerApp(object):
     def __init__(self, urls, controllers, config=None,
                  auth_class=None):
         self.mapper = Mapper()
-        if config is not None:
+        if config is None:
+            self.config = Config()
+        elif isinstance(config, Config):
             self.config = config
         else:
-            self.config = {}
+            # try to convert to config object
+            self.config = Config(config)
 
         # global config
         self.retry_after = self.config.get('global.retry_after', 1800)
@@ -156,15 +160,15 @@ class SyncServerApp(object):
 
         # overrides the original value with the host-specific value
         host_section = 'host:%s.' % host
-        host_config = {}
-        overriden_keys = []
+        host_config = Config()
+        overridden_keys = []
         for key, value in config.items():
-            if key in overriden_keys:
+            if key in overridden_keys:
                 continue
 
             if key.startswith(host_section):
                 key = key[len(host_section):]
-                overriden_keys.append(key)
+                overridden_keys.append(key)
             host_config[key] = value
 
         self._host_configs[host] = host_config
@@ -340,7 +344,7 @@ def set_app(urls, controllers, klass=SyncServerApp, auth_class=None,
     def make_app(global_conf, **app_conf):
         """Returns a Sync Server Application."""
         global_conf.update(app_conf)
-        params = convert_config(global_conf)
+        params = Config(global_conf)
         app = klass(urls, controllers, params, auth_class)
 
         if params.get('debug', False):

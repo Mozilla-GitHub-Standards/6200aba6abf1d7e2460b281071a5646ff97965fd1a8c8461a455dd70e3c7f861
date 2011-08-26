@@ -40,8 +40,6 @@ Base plugin class with registration mechanism and configuration reading.
 import abc
 import copy
 
-from services.util import filter_params
-
 
 def _resolve_name(name):
     """Resolves the name and returns the corresponding object."""
@@ -79,7 +77,8 @@ def _resolve_name(name):
 
 
 def load_and_configure(config, section=None, cls_param='backend'):
-    """given a config file, extracts the class name, imports the class and
+    """
+    Given a config object, extracts the class name, imports the class and
     returns an instance configured with the rest of the config file
 
     Can be used to load up classes that don't inherit from PluginRegistry,
@@ -93,12 +92,13 @@ def load_and_configure(config, section=None, cls_param='backend'):
             that defines the class to be used
 
     Returns:
-        An instanciated object of the requested class if the change was
+        An instantiated object of the requested class if the change was
         successful, False otherwise
     """
-    params = copy.copy(config)
     if section:
-        params = filter_params(section, params)
+        params = config.get_section(section)
+    else:
+        params = copy.copy(config)
 
     if 'interface' in params:
         interface = _resolve_name(params['interface'])
@@ -145,9 +145,9 @@ class PluginRegistry(object):
 
     @classmethod
     def get_from_config(cls, config, section=None, cls_name_field='backend'):
-        """Get a plugin from a config file."""
+        """Get a plugin from a config object."""
         if section:
-            config = filter_params(section, config)
+            config = config.get_section(section)
         backend_name = config[cls_name_field]
         del config[cls_name_field]
         return cls.get(backend_name, **config)

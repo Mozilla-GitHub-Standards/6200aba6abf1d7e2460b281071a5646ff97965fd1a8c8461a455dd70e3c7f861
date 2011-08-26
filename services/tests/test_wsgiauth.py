@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Rob Miller (rmiller@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,6 +38,7 @@ import unittest
 import base64
 from webob.exc import HTTPUnauthorized
 
+from services.config import Config
 from services.wsgiauth import Authentication
 from services.auth.dummy import DummyAuth
 
@@ -69,8 +71,8 @@ class AuthenticationTestCase(unittest.TestCase):
     def test_password_colons(self):
         # Passwords that contain colons are passed through to the
         # authentication function.
-        config = {'auth.backend':
-                  'services.tests.test_wsgiauth.ColonPasswordAuthTool'}
+        config = Config({'auth.backend':
+                  'services.tests.test_wsgiauth.ColonPasswordAuthTool'})
         auth = Authentication(config)
         token = 'Basic ' + base64.b64encode('user:pass:word:')
         req = Request('/1.0/tarek/info/collections',
@@ -80,7 +82,8 @@ class AuthenticationTestCase(unittest.TestCase):
 
     def test_authenticate_user(self):
 
-        config = {'auth.backend': 'services.tests.test_wsgiauth.AuthTool'}
+        config = Config({'auth.backend':
+                         'services.tests.test_wsgiauth.AuthTool'})
         auth = Authentication(config)
         token = 'Basic ' + base64.b64encode('tarek:tarek')
         req = Request('/1.0/tarek/info/collections', {})

@@ -43,7 +43,7 @@ import contextlib
 import logging
 from StringIO import StringIO
 
-from services.util import convert_config
+from services.config import Config
 from services.pluginreg import load_and_configure
 
 
@@ -113,9 +113,9 @@ class TestEnv(object):
 
     def convert_config(self, ini_cfg, ini_path):
         here = {'here': os.path.dirname(os.path.realpath(ini_path))}
-        cfg_dict = dict([(key, value % here) for key, value in
-                         ini_cfg.items('DEFAULT') + ini_cfg.items('app:main')])
-        return convert_config(cfg_dict)
+        cfg_in = dict([(key, value % here) for key, value in
+                       ini_cfg.items('DEFAULT') + ini_cfg.items('app:main')])
+        return Config(cfg_in)
 
     def add_class(self, section, cls_param="backend"):
         """Takes the name of a config section and uses it to instantiate a

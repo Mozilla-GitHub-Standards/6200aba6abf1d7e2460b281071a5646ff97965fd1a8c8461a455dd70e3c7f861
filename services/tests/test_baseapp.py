@@ -40,6 +40,7 @@ from time import sleep
 
 from services import logger
 from services.baseapp import SyncServerApp
+from services.config import Config
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
                              unsubscribe, APP_ENDS)
@@ -91,8 +92,8 @@ class TestBaseApp(unittest.TestCase):
             ('GET', '/boom3', 'foo', 'boom3')]
     controllers = {'foo': _Foo}
     config = {'host:here.one.two': 1,
-                'one.two': 2,
-                'auth.backend': 'services.auth.dummy.DummyAuth'}
+              'one.two': 2,
+              'auth.backend': 'services.auth.dummy.DummyAuth'}
 
     def setUp(self):
         self.app = SyncServerApp(self.urls, self.controllers, self.config)

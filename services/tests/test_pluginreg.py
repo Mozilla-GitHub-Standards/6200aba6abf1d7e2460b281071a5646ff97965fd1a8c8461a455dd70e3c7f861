@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Rob Miller (rmiller@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,6 +37,7 @@
 import unittest
 import abc
 
+from services.config import Config
 from services.pluginreg import PluginRegistry, load_and_configure
 
 
@@ -86,9 +88,10 @@ class TestPlugin(unittest.TestCase):
 
     def test_load_direct(self):
         from services.tests.test_pluginreg import Dummy
-        bad_config = {'backend': 'xxx'}
-        good_config = {'test.backend': 'services.tests.test_pluginreg.Dummy',
-                       'test.foo': 'bar'}
+        bad_config = Config({'backend': 'xxx'})
+        good_config = Config({'test.backend':
+                              'services.tests.test_pluginreg.Dummy',
+                              'test.foo': 'bar'})
         self.assertRaises(KeyError, load_and_configure, bad_config)
         obj = load_and_configure(good_config, 'test')
         self.assertTrue(isinstance(obj, Dummy))

@@ -36,8 +36,6 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 import time
-import tempfile
-import os
 import urllib2
 import socket
 import StringIO
@@ -46,23 +44,12 @@ import smtplib
 import warnings
 from email import message_from_string
 
-from services.util import (function_moved, convert_config, bigint2time,
-                           time2bigint, valid_email, batch,
-                           validate_password, ssha, ssha256,
-                           valid_password, json_response,
+from services.util import (function_moved, bigint2time, time2bigint,
+                           valid_email, batch, validate_password, ssha,
+                           ssha256, valid_password, json_response,
                            newlines_response, whoisi_response, text_response,
-                           get_url, proxy,
-                           get_source_ip, CatchErrorMiddleware, round_time,
-                           send_email, extract_node)
-
-
-_EXTRA = """\
-[some]
-stuff = True
-
-[other]
-thing = ok
-"""
+                           get_url, proxy, get_source_ip, CatchErrorMiddleware,
+                           round_time, send_email, extract_node)
 
 
 def return2():
@@ -159,27 +146,6 @@ class TestUtil(unittest.TestCase):
             self.assertRaises(ImportError, bad_redirect)
             self.assertRaises(TypeError, new_function_profile)
             self.assertEqual(return4(), 4)
-
-    def test_convert_config(self):
-        config = {'one': '1', 'two': 'bla', 'three': 'false'}
-        config = convert_config(config)
-
-        self.assertTrue(config['one'])
-        self.assertEqual(config['two'], 'bla')
-        self.assertFalse(config['three'])
-
-        # config also reads extra config files.
-        __, filename = tempfile.mkstemp()
-        try:
-            with open(filename, 'w') as f:
-                f.write(_EXTRA)
-
-            config = {'one': '1', 'two': 'file:%s' % filename}
-            config = convert_config(config)
-            self.assertTrue(config['some.stuff'])
-            self.assertEquals(config['other.thing'], 'ok')
-        finally:
-            os.remove(filename)
 
     def test_bigint2time(self):
         self.assertEquals(bigint2time(None), None)

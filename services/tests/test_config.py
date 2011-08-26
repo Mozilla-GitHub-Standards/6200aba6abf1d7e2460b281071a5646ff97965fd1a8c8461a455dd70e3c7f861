@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Rob Miller (rob@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,7 +39,8 @@ import tempfile
 import os
 from StringIO import StringIO
 
-from services.config import Config, EnvironmentNotFoundError
+from services.config import (SvcConfigParser, EnvironmentNotFoundError,
+                             Config)
 
 
 _FILE_ONE = """\
@@ -76,6 +78,14 @@ extends = no-no,no-no-no-no,no-no-no-no,theresnolimit
 foo = bar
 """
 
+_EXTRA = """\
+[some]
+stuff = True
+
+[other]
+thing = ok
+"""
+
 
 class ConfigTestCase(unittest.TestCase):
 
@@ -95,7 +105,7 @@ class ConfigTestCase(unittest.TestCase):
         os.remove(self.file_two)
 
     def test_reader(self):
-        config = Config(self.file_one)
+        config = SvcConfigParser(self.file_one)
 
         # values conversion
         self.assertEquals(config.get('one', 'foo'), 'bar')
@@ -121,4 +131,25 @@ class ConfigTestCase(unittest.TestCase):
     def test_nofile(self):
         # if a user tries to use an inexistant file in extensios,
         # pops an error
-        self.assertRaises(IOError, Config, self.file_three)
+        self.assertRaises(IOError, SvcConfigParser, self.file_three)
+
+    def test_config(self):
+        cfg_in = {'one': '1', 'two': 'bla', 'three': 'false'}
+        config = Config(cfg_in)
+
+        self.assertTrue(config['one'])
+        self.assertEqual(config['two'], 'bla')
+        self.assertFalse(config['three'])
+
+        # config also reads extra config files.
+        __, filename = tempfile.mkstemp()
+        try:
+            with open(filename, 'w') as f:
+                f.write(_EXTRA)
+
+            cfg_in = {'one': '1', 'two': 'file:%s' % filename}
+            config.load_config(cfg_in)
+            self.assertTrue(config['some.stuff'])
+            self.assertEquals(config['other.thing'], 'ok')
+        finally:
+            os.remove(filename)

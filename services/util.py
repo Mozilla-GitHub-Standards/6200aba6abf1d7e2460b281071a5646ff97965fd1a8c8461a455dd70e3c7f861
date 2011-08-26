@@ -64,7 +64,6 @@ from webob import Response
 
 from sqlalchemy.exc import OperationalError, TimeoutError
 
-from services.config import Config, convert
 from services import logger
 from services.exceptions import BackendError, BackendTimeoutError  # NOQA
 
@@ -360,44 +359,6 @@ def valid_password(user_name, password):
 
     user_name = user_name.encode('utf8')
     return user_name.lower().strip() != password.lower().strip()
-
-
-def convert_config(config):
-    """Loads the configuration.
-
-    If a "configuration" option is found, reads it using config.Config.
-    Each section/option is then converted to "section.option" in the resulting
-    mapping.
-    """
-    res = {}
-    for key, value in config.items():
-        if not isinstance(value, basestring) or not value.startswith('file:'):
-            res[key] = convert(value)
-            continue
-        # we load the configuration and inject it in the mapping
-        filename = value[len('file:'):]
-        if not os.path.exists(filename):
-            raise ValueError('The configuration file was not found. "%s"' % \
-                            filename)
-
-        conf = Config(filename)
-        res.update(conf.get_map())
-
-    return res
-
-
-def filter_params(namespace, data, replace_dot='_', splitchar='.'):
-    """Keeps only params that starts with the namespace.
-    """
-    params = {}
-    for key, value in data.items():
-        if splitchar not in key:
-            continue
-        skey = key.split(splitchar)
-        if skey[0] != namespace:
-            continue
-        params[replace_dot.join(skey[1:])] = value
-    return params
 
 
 def batch(iterable, size=100):

@@ -80,7 +80,7 @@ def convert(value):
     return _convert(value)
 
 
-class Config(RawConfigParser):
+class SvcConfigParser(RawConfigParser):
 
     def __init__(self, filename):
         # let's read the file
@@ -163,3 +163,80 @@ class Config(RawConfigParser):
                 if self.has_option(section, option):
                     continue
                 RawConfigParser.set(self, section, option, value)
+
+
+class Config(dict):
+    """
+    Base class which encapsulates all functionality related to the loading of
+    services app config.  It can be used by itself if it is passed an
+    application config dictionary, or subclasses can be provided which know how
+    to extract app config info from other formats or contexts.
+    """
+    def __init__(self, cfgdict=None, cfgfile=None):
+        if cfgdict is not None:
+            self.load_config(cfgdict)
+        if cfgfile is not None:
+            self.load_from_file(cfgfile)
+
+    def load_config(self, cfgdict):
+        """
+        Loads the provided configuration, performing any necessary conversions,
+        into the stored config.  Will overwrite any previously stored config
+        settings if a value is provided for an already stored key.
+
+        Any config value starting w/ 'file:' will not be loaded directly into
+        the stored config.  Instead, the specified file path will be
+        dereferenced and the resulting file will be passed to the
+        `load_from_file` method.
+
+        (assumed to be another config file)
+        will be loaded using SvcConfigParser.  Each section/option of the
+        loaded file will be converted to 'section.option' in the resulting
+        mapping.
+        """
+        for key, value in cfgdict.items():
+            if (not isinstance(value, basestring)
+                or not value.startswith('file:')):
+                self[key] = convert(value)
+                continue
+
+            path = value[len('file:'):]
+            self.load_from_file(path)
+
+    def load_from_file(self, path):
+        """
+        Uses SvcConfigParser to load configuration info from the specified
+        file.  The keys in a '[global]' section will be added to the config
+        dictionary as is, but keys from any other section will be added to the
+        config dictionary as '<section>.<key>'.
+        """
+        if not os.path.exists(path):
+            raise ValueError('The configuration file was not found. "%s"' %
+                             path)
+        conf = SvcConfigParser(path)
+        self.update(conf.get_map())
+
+    def get_section(self, section):
+        """
+        Returns a dictionary containing only the config for the specified
+        section, removing the '<section>.' prefix from all of the key names.  A
+        `section` value of 'global' or '' (i.e. empty string) will return the
+        global config values.
+
+        Returns an empty dict for sections that don't exist.
+        """
+        sec_cfg = dict()
+        global_ = True if section in ('', 'global') else False
+        splitchar = '.'
+        replacer = '_'
+        for key, value in self.items():
+            if splitchar not in key and not global_:
+                continue
+            skey = key
+            if splitchar in key:
+                skey = skey.split(splitchar)
+                if skey[0] != section:
+                    continue
+                skey = replacer.join(skey[1:])
+            sec_cfg[skey] = value
+        return sec_cfg
