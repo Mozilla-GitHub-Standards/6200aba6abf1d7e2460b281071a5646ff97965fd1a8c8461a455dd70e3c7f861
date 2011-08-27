@@ -535,13 +535,6 @@ def create_hash(data):
     return md5(data + rand).hexdigest()
 
 
-def extract_node(node):
-    """Takes a raw node result and splits it into a node and a dictionary
-    of any additional key-value pairs specified"""
-    vals = node.split('<')
-    return vals[0], dict([val.split('=', 1) for val in vals[1:]])
-
-
 @function_moved('services.user.extract_username')
 def extract_username(username):
     pass

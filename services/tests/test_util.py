@@ -48,7 +48,7 @@ from services.util import (function_moved, bigint2time, time2bigint,
                            valid_email, batch, validate_password, ssha,
                            ssha256, valid_password,
                            get_url, proxy, get_source_ip, CatchErrorMiddleware,
-                           round_time, send_email, extract_node)
+                           round_time, send_email)
 
 
 def return2():
@@ -407,11 +407,3 @@ class TestUtil(unittest.TestCase):
             self.assertEqual(mail['To'], 'someone@somewhere.com')
         finally:
             smtplib.SMTP = old
-
-    def test_extract_node(self):
-        str1 = "basenode"
-        str2 = "node<a=1<b=2"
-        str3 = "node<a"
-        self.assertEqual(extract_node(str1), ('basenode', {}))
-        self.assertEqual(extract_node(str2), ('node', {'a': '1', 'b': '2'}))
-        self.assertRaises(ValueError, extract_node, str3)
