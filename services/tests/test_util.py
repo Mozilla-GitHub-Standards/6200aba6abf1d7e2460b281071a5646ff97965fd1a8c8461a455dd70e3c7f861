@@ -46,9 +46,8 @@ from email import message_from_string
 
 from services.util import (function_moved, bigint2time, time2bigint,
                            valid_email, batch, validate_password, ssha,
-                           ssha256, valid_password,
-                           get_url, proxy, get_source_ip, CatchErrorMiddleware,
-                           round_time, send_email)
+                           ssha256, valid_password, get_source_ip,
+                           CatchErrorMiddleware, round_time, send_email)
 
 
 def return2():
@@ -190,64 +189,6 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(valid_password(u't' * 8, u't' * 8))
         self.assertTrue(valid_password(u'tarek', u't' * 8))
         self.assertFalse(valid_password(u'café' * 3, u'café' * 3))
-
-    def test_get_url(self):
-
-        # malformed url
-        self.assertRaises(ValueError, get_url, 'impossible url')
-
-        # unknown location
-        code, headers, body = get_url('http://dwqkndwqpihqdw.com',
-                                      get_body=False)
-        self.assertEquals(code, 502)
-        self.assertTrue('Name or service not known' in body)
-
-        # any page
-        code, headers, body = get_url('http://google.com', get_body=False)
-        self.assertEquals(code, 200)
-        self.assertEquals(body, '')
-
-        # page with auth failure
-        code, headers, body = get_url('http://badauth',
-                                      user='tarek',
-                                      password='xxxx')
-        self.assertEquals(code, 401)
-
-        # page with right auth
-        code, headers, body = get_url('http://goodauth',
-                                      user='tarek',
-                                      password='passat76')
-        self.assertEquals(code, 200)
-        self.assertEquals(body, '{}')
-
-        # page that times out
-        code, headers, body = get_url('http://timeout', timeout=0.1)
-        self.assertEquals(code, 504)
-
-        # page that fails
-        code, headers, body = get_url('http://error', get_body=False)
-        self.assertEquals(code, 500)
-
-    def test_proxy(self):
-        class FakeRequest(object):
-            url = 'http://locahost'
-            method = 'GET'
-            body = 'xxx'
-            headers = {'Content-Length': 3, 'X-Me-This': 1,
-                       'X-Me-That': 2}
-            remote_addr = '192.168.1.1'
-            _authorization = 'Basic SomeToken'
-
-        request = FakeRequest()
-        response = proxy(request, 'http', 'newplace')
-        self.assertEqual(response.content_length, 31)
-        self.assertEqual(response.body, 'http://newplace Basic SomeToken')
-
-        # we want to make sure that X- headers are proxied
-        request = FakeRequest()
-        response = proxy(request, 'http', 'xheaders')
-        self.assertTrue("('X-me-that', 2), ('X-me-this', 1)" in response.body)
-        self.assertTrue("X-forwarded-for" in response.body)
 
     def test_get_source_ip(self):
         environ = {'HTTP_X_FORWARDED_FOR': 'one'}

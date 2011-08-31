@@ -40,7 +40,7 @@ import simplejson as json
 import urlparse
 
 from services import logger
-from services.util import get_url
+from services.http_helpers import get_url
 from services.user.mozilla_ldap import LDAPUser
 from services.user import User
 from services.resetcodes import InvalidCodeError

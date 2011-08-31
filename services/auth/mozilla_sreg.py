@@ -38,7 +38,8 @@
 import simplejson as json
 import urlparse
 
-from services.util import BackendError, get_url
+from services.exceptions import BackendError
+from services.http_helpers import get_url
 from services.auth.ldapsql import LDAPAuth
 from services import logger
 from services.ldappool import StateConnector

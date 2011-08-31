@@ -39,7 +39,8 @@
 import urlparse
 import json
 
-from services.util import get_url, BackendError
+from services.exceptions import BackendError
+from services.http_helpers import get_url
 from services.auth import NoEmailError
 from services.resetcodes import ResetCode, NoUserIDError, AlreadySentError
 from services.respcodes import ERROR_NO_EMAIL_ADDRESS
