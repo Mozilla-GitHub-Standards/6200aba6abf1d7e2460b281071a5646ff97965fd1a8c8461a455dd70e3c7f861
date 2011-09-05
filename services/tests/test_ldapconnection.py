@@ -60,7 +60,18 @@ def _bind_fails(self, who='', cred='', **kw):
 
 
 def _bind_fails2(self, who='', cred='', **kw):
-    raise ldap.SERVER_DOWN()
+    global _CALL_COUNTER
+    _CALL_COUNTER += 1
+    raise ldap.SERVER_DOWN('I am down')
+
+
+_CALL_COUNTER = 0
+
+
+def _bind_fails3(self, who='', cred='', **kw):
+    global _CALL_COUNTER
+    _CALL_COUNTER += 1
+    raise ldap.TIMEOUT('Boo')
 
 
 class TestLDAPConnection(unittest.TestCase):
@@ -161,12 +172,37 @@ class TestLDAPConnection(unittest.TestCase):
         passwd = 'adminuser'
         cm = ConnectionManager(uri, dn, passwd, use_pool=True, size=2)
         self.assertEqual(len(cm), 0)
-
         try:
             with cm.connection('dn', 'pass'):
                 pass
         except BackendError, err:
-            wanted = 'BackendError on \n\nUnable to connect to server'
+            wanted = 'BackendError on \n\nI am down'
             self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()
+
+    def test_timeout_retry(self):
+        if not LDAP:
+            return
+
+        # the binding fails with an LDAPError
+        StateConnector.simple_bind_s = _bind_fails3
+        uri = ''
+        dn = 'uid=adminuser,ou=logins,dc=mozilla'
+        passwd = 'adminuser'
+        cm = ConnectionManager(uri, dn, passwd, use_pool=True, size=2)
+        self.assertEqual(len(cm), 0)
+
+        counter = _CALL_COUNTER
+        try:
+            with cm.connection('dn', 'pass'):
+                pass
+        except BackendError, err:
+            wanted = 'BackendTimeoutError on \n\nBoo'
+            self.assertEqual(wanted, str(err))
+        else:
+            raise AssertionError()
+
+        # let's make sure we did retry several times
+        num_tries = _CALL_COUNTER - counter
+        self.assertEqual(num_tries, cm.retry_max)

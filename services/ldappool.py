@@ -142,10 +142,7 @@ class ConnectionManager(object):
             while tries < self.retry_max and not connected:
                 try:
                     conn.simple_bind_s(bind, passwd)
-                except ldap.TIMEOUT, e:
-                    # timed out, we're getting out
-                    raise BackendTimeoutError(str(e))
-                except ldap.SERVER_DOWN:
+                except (ldap.SERVER_DOWN, ldap.TIMEOUT), e:
                     # the server seems down, we can retry
                     time.sleep(self.retry_delay)
                     tries += 1
@@ -153,7 +150,7 @@ class ConnectionManager(object):
                     raise
                 except ldap.LDAPError, e:
                     # invalid connection, or unknown error should die
-                    raise BackendError(str(e))
+                    raise BackendError(str(e), server=self.uri)
                 else:
                     # we're good
                     connected = True
@@ -165,7 +162,10 @@ class ConnectionManager(object):
                 else:
                     msg = 'Unable to connect to server'
 
-                raise BackendError(msg, server=self.uri)
+                if isinstance(e, ldap.TIMEOUT):
+                    raise BackendTimeoutError(msg, server=self.uri)
+                else:
+                    raise BackendError(msg, server=self.uri)
 
         conn.active = True
 
