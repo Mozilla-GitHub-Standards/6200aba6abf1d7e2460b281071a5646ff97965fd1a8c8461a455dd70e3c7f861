@@ -79,13 +79,15 @@ class TestLDAPConnection(unittest.TestCase):
     def setUp(self):
         if not LDAP:
             return
-        self.old = StateConnector.simple_bind_s
+        self.old_bind = StateConnector.simple_bind_s
         StateConnector.simple_bind_s = _bind
+        self.old_unbind = StateConnector.unbind_s
 
     def tearDown(self):
         if not LDAP:
             return
-        StateConnector.simple_bind_s = self.old
+        StateConnector.simple_bind_s = self.old_bind
+        StateConnector.unbind_s = self.old_unbind
 
     def test_connection(self):
         if not LDAP:
@@ -165,8 +167,14 @@ class TestLDAPConnection(unittest.TestCase):
         if not LDAP:
             return
 
+        unbinds = []
+
+        def _unbind(self):
+            unbinds.append(1)
+
         # the binding fails with an LDAPError
         StateConnector.simple_bind_s = _bind_fails2
+        StateConnector.unbind_s = _unbind
         uri = ''
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
@@ -180,6 +188,9 @@ class TestLDAPConnection(unittest.TestCase):
             self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()
+
+        # make sure we did unbind
+        self.assertEqual(len(unbinds), 1)
 
     def test_timeout_retry(self):
         if not LDAP:

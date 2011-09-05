@@ -157,6 +157,10 @@ class ConnectionManager(object):
 
             # we failed
             if not connected:
+                if isinstance(e, ldap.SERVER_DOWN):
+                    # we need to unbind in that case
+                    conn.unbind_s()
+
                 if e is not None:
                     msg = str(e)
                 else:
