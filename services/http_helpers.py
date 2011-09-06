@@ -39,9 +39,6 @@ import urllib2
 import socket
 import base64
 from urlparse import urlparse, urlunparse
-import wsgi_intercept
-from wsgi_intercept.urllib2_intercept import (install_opener,
-                                              uninstall_opener)
 
 
 def get_url(url, method='GET', data=None, user=None, password=None, timeout=5,
