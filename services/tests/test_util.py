@@ -43,6 +43,7 @@ import sys
 import smtplib
 import warnings
 from email import message_from_string
+from test.test_support import check_warnings
 
 from services.util import (function_moved, bigint2time, time2bigint,
                            valid_email, batch, validate_password, ssha,
@@ -228,7 +229,8 @@ class TestUtil(unittest.TestCase):
         old_std = sys.stdout
         sys.stdout = StringIO.StringIO()
         try:
-            result = app({}, fake_start_response)
+            with check_warnings(quiet=True):
+                result = app({}, fake_start_response)
         finally:
             sys.stdout = old_std
 
@@ -236,6 +238,20 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(len(errs), 2)
         # the first error logged is a md5 hash
         self.assertEqual(len(errs[0]), 32)
+
+        # let's try the new style hooks
+        def hello2(info):
+            return str(info)
+
+        app = CatchErrorMiddleware(BadClass(), hook=hello2)
+        old_std = sys.stdout
+        sys.stdout = StringIO.StringIO()
+        try:
+            result = app({}, fake_start_response)
+        finally:
+            sys.stdout = old_std
+
+        self.assertTrue('crash_id' in result[0])
 
         # let's test the response
         app = CatchErrorMiddleware(BadClass())
