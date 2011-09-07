@@ -104,6 +104,24 @@ class SvcConfigParser(RawConfigParser):
             for file_ in extends:
                 self._extend(file_)
 
+        # `self._sections` is a dictionary of all the sections and settings.
+        # It's maybe a little dirty relying on and manipulating a ConfigParser
+        # internal data structure here, but it's exactly what we need, and it
+        # won't be hard to change this code if the internal structure ever
+        # changes.
+        #
+        # Handle the 'multi-config' sections
+        sections = self._sections
+        for section in sections:
+            if ':' not in section:
+                continue
+            prefix = section.split(':')[0]
+            if prefix in sections:
+                # start w/ parent section so more specific wins
+                merged = sections[prefix].copy()
+                merged.update(sections[section])
+                sections[section] = merged
+
     def _serialize(self, value):
         """values are serialized on every set"""
         if isinstance(value, bool):
@@ -206,9 +224,8 @@ class Config(dict):
     def load_from_file(self, path):
         """
         Uses SvcConfigParser to load configuration info from the specified
-        file.  The keys in a '[global]' section will be added to the config
-        dictionary as is, but keys from any other section will be added to the
-        config dictionary as '<section>.<key>'.
+        file.  Keys will be added to the config dictionary as
+        '<section>.<key>'.
         """
         if not os.path.exists(path):
             raise ValueError('The configuration file was not found. "%s"' %
@@ -219,18 +236,18 @@ class Config(dict):
     def get_section(self, section):
         """
         Returns a dictionary containing only the config for the specified
-        section, removing the '<section>.' prefix from all of the key names.  A
-        `section` value of 'global' or '' (i.e. empty string) will return the
-        global config values.
+        section, removing the '<section>.' prefix from all of the key names.
+        If the section value is the empty string we return any values that have
+        no section prefix.
 
         Returns an empty dict for sections that don't exist.
         """
         sec_cfg = dict()
-        global_ = True if section in ('', 'global') else False
+        default = section == ''
         splitchar = '.'
         replacer = '_'
         for key, value in self.items():
-            if splitchar not in key and not global_:
+            if splitchar not in key and not default:
                 continue
             skey = key
             if splitchar in key:

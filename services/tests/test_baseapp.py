@@ -253,8 +253,8 @@ class TestBaseApp(unittest.TestCase):
         subscribe(REQUEST_ENDS, ends)
         try:
             config = {'global.heartbeat_page': '__heartbeat__',
-                    'global.debug_page': '__debug__',
-                    'auth.backend': 'services.auth.dummy.DummyAuth'}
+                      'global.debug_page': '__debug__',
+                      'auth.backend': 'services.auth.dummy.DummyAuth'}
             urls = []
             controllers = {}
             app = SyncServerApp(urls, controllers, config)

@@ -78,6 +78,28 @@ extends = no-no,no-no-no-no,no-no-no-no,theresnolimit
 foo = bar
 """
 
+_FILE_FOUR = """\
+[global]
+foo = bar
+baz = bawlp
+
+[auth]
+a = b
+c = d
+
+[storage]
+e = f
+g = h
+
+[storage:once]
+i = j
+k = l
+
+[storage:thrice]
+i = jjj
+k = lll
+"""
+
 _EXTRA = """\
 [some]
 stuff = True
@@ -98,6 +120,12 @@ class ConfigTestCase(unittest.TestCase):
         self.file_one = StringIO(_FILE_ONE % filename)
         self.file_two = filename
         self.file_three = StringIO(_FILE_THREE)
+
+        fp, filename = tempfile.mkstemp()
+        f = os.fdopen(fp, 'w')
+        f.write(_FILE_FOUR)
+        f.close()
+        self.file_four = filename
 
     def tearDown(self):
         if '__STUFF__' in os.environ:
@@ -153,3 +181,38 @@ class ConfigTestCase(unittest.TestCase):
             self.assertEquals(config['other.thing'], 'ok')
         finally:
             os.remove(filename)
+
+    def test_multiconfig(self):
+        config = Config(cfgfile=self.file_four)
+        global_ = {'foo': 'bar', 'baz': 'bawlp'}
+        self.assertEqual(config.get_section(''), dict())
+        self.assertEqual(config.get_section('global'), global_)
+
+        self.assertEqual(config['auth.a'], 'b')
+        self.assertEqual(config['auth.c'], 'd')
+        self.assertEqual(config.get_section('auth'),
+                         {'a': 'b', 'c': 'd'})
+
+        storage = {'e': 'f', 'g': 'h'}
+        self.assertEqual(config['storage.e'], 'f')
+        self.assertEqual(config['storage.g'], 'h')
+        self.assertEqual(config.get_section('storage'),
+                         storage)
+
+        storage_once = {'i': 'j', 'k': 'l'}
+        storage_once.update(storage)
+        self.assertEqual(config['storage:once.e'], 'f')
+        self.assertEqual(config['storage:once.g'], 'h')
+        self.assertEqual(config['storage:once.i'], 'j')
+        self.assertEqual(config['storage:once.k'], 'l')
+        self.assertEqual(config.get_section('storage:once'),
+                         storage_once)
+
+        storage_thrice = {'i': 'jjj', 'k': 'lll'}
+        storage_thrice.update(storage)
+        self.assertEqual(config['storage:thrice.e'], 'f')
+        self.assertEqual(config['storage:thrice.g'], 'h')
+        self.assertEqual(config['storage:thrice.i'], 'jjj')
+        self.assertEqual(config['storage:thrice.k'], 'lll')
+        self.assertEqual(config.get_section('storage:thrice'),
+                         storage_thrice)

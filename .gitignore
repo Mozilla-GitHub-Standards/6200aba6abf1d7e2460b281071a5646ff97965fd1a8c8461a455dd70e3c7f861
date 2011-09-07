@@ -5,7 +5,7 @@ lib
 include
 bin
 deps
-Syncserver.egg-info
+*.egg-info
 *.swp
 html
 doc/build
