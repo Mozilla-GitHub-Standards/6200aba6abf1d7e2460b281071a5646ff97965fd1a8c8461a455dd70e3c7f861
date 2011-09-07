@@ -496,4 +496,3 @@ def check_reset_code(code):
     from services.resetcodes import ResetCode
     rc = ResetCode()
     return rc._check_reset_code
-    pass
