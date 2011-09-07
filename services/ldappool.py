@@ -11,6 +11,7 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
+
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
@@ -47,6 +48,26 @@ from services.exceptions import (BackendError, BackendTimeoutError,
 
 class StateConnector(ReconnectLDAPObject):
     """Just remembers who is connected, and if connected"""
+    def __init__(self, *args, **kw):
+        ReconnectLDAPObject.__init__(self, *args, **kw)
+        self.connected = False
+        self.who = ''
+        self.cred = ''
+
+    def __str__(self):
+        res = 'LDAP Connector'
+        if self.connected:
+            res += ' (connected)'
+        else:
+            res += ' (disconnected)'
+
+        if self.who != '':
+            res += ' - who: %r' % self.who
+
+        if self._uri != '':
+            res += ' - uri: %r' % self._uri
+
+        return res
 
     def simple_bind_s(self, who='', cred='', serverctrls=None,
                       clientctrls=None):
@@ -150,7 +171,7 @@ class ConnectionManager(object):
                     raise
                 except ldap.LDAPError, e:
                     # invalid connection, or unknown error should die
-                    raise BackendError(str(e), server=self.uri)
+                    raise BackendError(str(e), backend=conn)
                 else:
                     # we're good
                     connected = True
@@ -169,7 +190,7 @@ class ConnectionManager(object):
                 if isinstance(e, ldap.TIMEOUT):
                     raise BackendTimeoutError(msg, server=self.uri)
                 else:
-                    raise BackendError(msg, server=self.uri)
+                    raise BackendError(msg, backend=conn)
 
         conn.active = True
 

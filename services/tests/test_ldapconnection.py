@@ -56,6 +56,8 @@ def _bind(self, who='', cred='', **kw):
 
 
 def _bind_fails(self, who='', cred='', **kw):
+    self.who = who
+    self.cred = cred
     raise ldap.LDAPError('LDAP connection invalid')
 
 
@@ -149,17 +151,22 @@ class TestLDAPConnection(unittest.TestCase):
 
         # the binding fails with an LDAPError
         StateConnector.simple_bind_s = _bind_fails
-        uri = ''
+        uri = 'ldap://localhost:2222'
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
         cm = ConnectionManager(uri, dn, passwd, use_pool=True, size=2)
         self.assertEqual(len(cm), 0)
-
+        wanted = ("LDAP Connector (disconnected) - who: 'dn' - uri: "
+                  "'ldap://localhost:2222'")
+        wanted2 = ("BackendError\nLDAP Connector (disconnected) - "
+                   "who: 'dn' - uri: 'ldap://localhost:2222'\n\n"
+                   "LDAP connection invalid")
         try:
             with cm.connection('dn', 'pass'):
                 pass
-        except BackendError:
-            pass
+        except BackendError, e:
+            self.assertEqual(str(e.backend), wanted)
+            self.assertEqual(str(e), wanted2)
         else:
             raise AssertionError()
 
@@ -184,7 +191,8 @@ class TestLDAPConnection(unittest.TestCase):
             with cm.connection('dn', 'pass'):
                 pass
         except BackendError, err:
-            wanted = 'BackendError on \n\nI am down'
+            wanted = ("BackendError\nLDAP Connector (disconnected)\n\n"
+                      "I am down")
             self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()
@@ -209,7 +217,7 @@ class TestLDAPConnection(unittest.TestCase):
             with cm.connection('dn', 'pass'):
                 pass
         except BackendError, err:
-            wanted = 'BackendTimeoutError on \n\nBoo'
+            wanted = 'BackendTimeoutError\n\nBoo'
             self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()

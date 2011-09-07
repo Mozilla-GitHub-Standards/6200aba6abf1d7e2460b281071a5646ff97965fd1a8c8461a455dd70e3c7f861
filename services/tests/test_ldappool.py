@@ -185,6 +185,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
         # if no slot gets freed in less than one second.
         worker1 = Worker(pool, 1.1)
         worker1.start()
+        time.sleep(0.1)
         try:
             self.assertRaises(MaxConnectionReachedError, tryit)
         finally:

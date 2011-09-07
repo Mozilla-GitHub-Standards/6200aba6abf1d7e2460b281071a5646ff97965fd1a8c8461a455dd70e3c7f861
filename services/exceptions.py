@@ -46,19 +46,32 @@ _TMP = """\
 
 class BackendError(Exception):
     """Raised when the backend is down or fails"""
-    def __init__(self, msg='', server='localhost', retry_after=None):
+    def __init__(self, msg='', server='', retry_after=None,
+                 backend=None):
         """
-        - msg, server will be dumped in str()
+        - msg, server will be dumped in str() if provided
         - retry_after, if set to a positive integer, will be used to send
           back a Retry-After header value. If not set, a default value is
           returned. If set to 0, the header is explicitely skipped.
+        - backend: if provided, the backend from where originated the error.
+          it will be used to render more details, It can be any kind of object
+          as __str__() will be called on it.
+
         """
         self.msg = msg
         self.server = server
         self.retry_after = retry_after
+        self.backend = backend
 
     def __str__(self):
-        return _TMP % (self.__class__.__name__, self.server, self.msg)
+        res = self.__class__.__name__
+        if self.server != '':
+            res += ' on %s' % self.server
+        if self.backend is not None:
+            res += '\n%s' % str(self.backend)
+        if self.msg != '':
+            res += '\n\n%s' % self.msg
+        return res
 
 
 class BackendTimeoutError(BackendError):
