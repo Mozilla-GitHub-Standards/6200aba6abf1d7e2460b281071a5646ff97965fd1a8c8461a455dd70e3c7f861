@@ -45,9 +45,7 @@ from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.pool import NullPool
 
 from services import logger
-from services.util import (validate_password, ssha256,
-                           generate_reset_code, safe_execute)
-
+from services.util import validate_password, ssha256, safe_execute
 from services.auth.resetcode import ResetCodeManager
 from services.resetcodes import ResetCode
 

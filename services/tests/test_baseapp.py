@@ -40,7 +40,6 @@ from time import sleep
 
 from services import logger
 from services.baseapp import SyncServerApp
-from services.config import Config
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
                              unsubscribe, APP_ENDS)

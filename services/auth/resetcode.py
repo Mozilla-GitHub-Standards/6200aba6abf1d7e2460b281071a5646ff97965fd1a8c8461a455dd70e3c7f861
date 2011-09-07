@@ -45,7 +45,7 @@ from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy import String, DateTime
 from sqlalchemy.sql import bindparam, select, insert, delete
 
-from services.util import generate_reset_code, check_reset_code, safe_execute
+from services.util import safe_execute
 from services import logger
 from services.resetcodes import ResetCode
 

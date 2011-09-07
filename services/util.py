@@ -465,15 +465,16 @@ def convert_response(request, lines, **kw):
     pass
 
 
-
 @function_moved('services.http_helpers.get_url')
 def get_url(url, method='GET', data=None, user=None, password=None, timeout=5,
             get_body=True, extra_headers=None):
     pass
 
+
 @function_moved('services.http_helpers.proxy')
 def proxy(request, scheme, netloc, timeout=5):
     pass
+
 
 @function_moved('services.resetcodes.ResetCode._generate_reset_code', False)
 def generate_reset_code():

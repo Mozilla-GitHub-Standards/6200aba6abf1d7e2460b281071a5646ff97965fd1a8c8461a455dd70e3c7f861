@@ -38,7 +38,6 @@
 import unittest
 import urllib2
 import socket
-from webob import Response
 from services.http_helpers import get_url, proxy
 
 
@@ -148,4 +147,3 @@ class TestHttp(unittest.TestCase):
         response = proxy(request, 'http', 'xheaders')
         self.assertTrue("('X-me-that', 2), ('X-me-this', 1)" in response.body)
         self.assertTrue("X-forwarded-for" in response.body)
-
