@@ -38,8 +38,8 @@ import threading
 import time
 try:
     import ldap
-    from services.auth.ldappool import (ConnectionPool, StateConnector,
-                                       MaxConnectionReachedError)
+    from services.ldappool import ConnectionManager, StateConnector
+    from services.exceptions import MaxConnectionReachedError
     LDAP = True
 except ImportError:
     LDAP = False
@@ -59,6 +59,7 @@ if LDAP:
         self.connected = True
         self.who = who
         self.cred = cred
+        self._connection_time = time.time()
 
     StateConnector.simple_bind_s = _simple_bind
 
@@ -128,7 +129,9 @@ class TestLDAPSQLAuth(unittest.TestCase):
             return
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
-        pool = ConnectionPool('ldap://localhost', dn, passwd)
+        pool = ConnectionManager('ldap://localhost', dn, passwd,
+                                 use_pool=True)
+
         workers = [LDAPWorker(pool) for i in range(10)]
 
         for worker in workers:
@@ -145,8 +148,8 @@ class TestLDAPSQLAuth(unittest.TestCase):
             return
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
-        pool = ConnectionPool('ldap://localhost', dn, passwd, size=1,
-                              retry_delay=1., retry_max=5)
+        pool = ConnectionManager('ldap://localhost', dn, passwd, size=1,
+                              retry_delay=1., retry_max=5, use_pool=True)
 
         class Worker(threading.Thread):
 
@@ -199,7 +202,8 @@ class TestLDAPSQLAuth(unittest.TestCase):
             return
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
-        pool = ConnectionPool('ldap://localhost', dn, passwd, size=1)
+        pool = ConnectionManager('ldap://localhost', dn, passwd, size=1,
+                                 use_pool=True)
         with pool.connection('bind1') as conn:  # NOQA
             pass
 
@@ -214,7 +218,8 @@ class TestLDAPSQLAuth(unittest.TestCase):
             return
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
-        pool = ConnectionPool('ldap://localhost', dn, passwd)
+        pool = ConnectionManager('ldap://localhost', dn, passwd,
+                                 use_pool=True)
 
         with pool.connection() as conn:
             self.assertTrue(conn.active)
@@ -247,7 +252,7 @@ class TestLDAPSQLAuth(unittest.TestCase):
 
         self.assertTrue(conn is conn2)
 
-        # same bind different password: discard
+        # same bind different password, inactive: rebind
         with pool.connection('bind', 'passwd') as conn:
             self.assertTrue(conn.active)
 
@@ -257,4 +262,34 @@ class TestLDAPSQLAuth(unittest.TestCase):
         with pool.connection('bind', 'passwd2') as conn2:
             pass
 
-        self.assertTrue(conn is not conn2)
+        self.assertTrue(conn is conn2)
+
+    def test_max_lifetime(self):
+        if not LDAP:
+            return
+
+        dn = 'uid=adminuser,ou=logins,dc=mozilla'
+        passwd = 'adminuser'
+        pool = ConnectionManager('ldap://localhost', dn, passwd,
+                                 max_lifetime=0.5, use_pool=True)
+
+        with pool.connection('bind', 'password') as conn:
+            self.assertTrue(conn.active)
+
+        self.assertFalse(conn.active)
+        self.assertTrue(conn.connected)
+
+        # same bind and password: reuse
+        with pool.connection('bind', 'passwd') as conn2:
+            self.assertTrue(conn2.active)
+
+        self.assertTrue(conn is conn2)
+
+        time.sleep(0.6)
+
+        # same bind and password, but max lifetime reached: new one
+        with pool.connection('bind', 'passwd') as conn3:
+            self.assertTrue(conn3.active)
+
+        self.assertTrue(conn3 is not conn2)
+        self.assertTrue(conn3 is not conn)

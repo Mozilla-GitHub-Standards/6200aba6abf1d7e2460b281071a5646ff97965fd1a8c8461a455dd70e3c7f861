@@ -53,6 +53,13 @@ class StateConnector(ReconnectLDAPObject):
         self.connected = False
         self.who = ''
         self.cred = ''
+        self._connection_time = None
+
+    def get_lifetime(self):
+        """Returns the lifetime of the connection on the server in seconds."""
+        if self._connection_time is None:
+            return 0
+        return time.time() - self._connection_time
 
     def __str__(self):
         res = 'LDAP Connector'
@@ -76,6 +83,7 @@ class StateConnector(ReconnectLDAPObject):
         self.connected = True
         self.who = who
         self.cred = cred
+        self._connection_time = time.time()
         return res
 
     def unbind_ext_s(self, serverctrls=None, clientctrls=None):
@@ -86,6 +94,7 @@ class StateConnector(ReconnectLDAPObject):
             self.connected = False
             self.who = None
             self.cred = None
+            self._connection_time = None
 
     def add_s(self, *args, **kwargs):
         return self._apply_method_s(ReconnectLDAPObject.add_s, *args,
@@ -103,7 +112,8 @@ class ConnectionManager(object):
     """
     def __init__(self, uri, bind=None, passwd=None, size=10, retry_max=3,
                  retry_delay=.1, use_tls=False, single_box=False, timeout=-1,
-                 connector_cls=StateConnector, use_pool=False):
+                 connector_cls=StateConnector, use_pool=False,
+                 max_lifetime=600):
         self._pool = []
         self.size = size
         self.retry_max = retry_max
@@ -116,6 +126,7 @@ class ConnectionManager(object):
         self.timeout = timeout
         self.connector_cls = connector_cls
         self.use_pool = use_pool
+        self.max_lifetime = max_lifetime
 
     def __len__(self):
         return len(self._pool)
@@ -128,6 +139,14 @@ class ConnectionManager(object):
             for conn in reversed(self._pool):
                 # already in usage
                 if conn.active:
+                    continue
+
+                # let's check the lifetime
+                if conn.get_lifetime() > self.max_lifetime:
+                    # this connector has lived for too long,
+                    # we want to unbind it and remove it from the pool
+                    conn.unbind_s()
+                    self._pool.remove(conn)
                     continue
 
                 # we found a connector for this bind
@@ -231,6 +250,9 @@ class ConnectionManager(object):
         if self.use_pool:
             with self._pool_lock:
                 self._pool.append(conn)
+        else:
+            # with no pool, the connector is always active
+            conn.active = True
 
         return conn
 
@@ -246,6 +268,8 @@ class ConnectionManager(object):
 
                     # done.
                     return
+        else:
+            connection.active = False
 
         # let's try to unbind it
         try:
