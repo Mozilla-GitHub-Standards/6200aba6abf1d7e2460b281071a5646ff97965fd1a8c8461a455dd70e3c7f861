@@ -44,11 +44,6 @@ from hashlib import sha256, sha1, md5
 import base64
 import simplejson as json
 import itertools
-from email.mime.text import MIMEText
-from email.header import Header
-from rfc822 import AddressList
-import smtplib
-import socket
 import re
 import datetime
 import os
@@ -207,81 +202,6 @@ def validate_password(clear, hash):
     # both hash_meth take a unicode value for clear
     password = hash_meth(clear, salt)
     return password == hash
-
-
-def send_email(sender, rcpt, subject, body, smtp_host='localhost',
-               smtp_port=25, smtp_user=None, smtp_password=None, **kw):
-    """Sends a text/plain email synchronously.
-
-    Args:
-        sender: sender address
-        rcpt: recipient address
-        subject: subject
-        body: email body
-        smtp_host: smtp server -- defaults to localhost
-        smtp_port: smtp port -- defaults to 25
-        smtp_user: smtp user if the smtp server requires it
-        smtp_password: smtp password if the smtp server requires it
-
-    Returns:
-        tuple: (True or False, Error Message)
-    """
-    # preparing the message
-    msg = MIMEText(body.encode('utf8'), 'plain', 'utf8')
-
-    def _normalize_realname(field):
-        address = AddressList(field).addresslist
-        if len(address) == 1:
-            realname, email = address[0]
-            if realname != '':
-                return '%s <%s>' % (str(Header(realname, 'utf8')), str(email))
-        return field
-
-    msg['From'] = _normalize_realname(sender)
-    msg['To'] = _normalize_realname(rcpt)
-    msg['Subject'] = Header(subject, 'utf8')
-
-    try:
-        server = smtplib.SMTP(smtp_host, smtp_port, timeout=5)
-    except (smtplib.SMTPConnectError, socket.error), e:
-        return False, str(e)
-
-    # auth
-    if smtp_user is not None and smtp_password is not None:
-        try:
-            server.login(smtp_user, smtp_password)
-        except (smtplib.SMTPHeloError,
-                smtplib.SMTPAuthenticationError,
-                smtplib.SMTPException), e:
-            return False, str(e)
-
-    # the actual sending
-    try:
-        server.sendmail(sender, [rcpt], msg.as_string())
-    finally:
-        server.quit()
-
-    return True, None
-
-
-_USER = '(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))'
-_IP_DOMAIN = '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
-_NAME_DOMAIN = '(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,})'
-_DOMAIN = '(%s|%s)' % (_IP_DOMAIN, _NAME_DOMAIN)
-_RE_EMAIL = '^%s@%s$' % (_USER, _DOMAIN)
-_RE_EMAIL = re.compile(_RE_EMAIL)
-
-
-def valid_email(email):
-    """Checks if the email is well-formed
-
-    Args:
-        email: e-mail to check
-
-    Returns:
-        True or False
-    """
-    return _RE_EMAIL.match(email) is not None
 
 
 def valid_password(user_name, password):
@@ -502,3 +422,14 @@ def check_reset_code(code):
     from services.resetcodes import ResetCode
     rc = ResetCode()
     return rc._check_reset_code
+
+
+@function_moved('services.emailer.send_email')
+def send_email(sender, rcpt, subject, body, smtp_host='localhost',
+               smtp_port=25, smtp_user=None, smtp_password=None, **kw):
+    pass
+
+
+@function_moved('services.emailer.valid_email')
+def valid_email(email):
+    pass
