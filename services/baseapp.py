@@ -155,24 +155,7 @@ class SyncServerApp(object):
 
     def _host_specific(self, host, config):
         """Will compute host-specific requests"""
-        if host in self._host_configs:
-            return self._host_configs[host]
-
-        # overrides the original value with the host-specific value
-        host_section = 'host:%s.' % host
-        host_config = Config()
-        overridden_keys = []
-        for key, value in config.items():
-            if key in overridden_keys:
-                continue
-
-            if key.startswith(host_section):
-                key = key[len(host_section):]
-                overridden_keys.append(key)
-            host_config[key] = value
-
-        self._host_configs[host] = host_config
-        return host_config
+        return config.merge('host:%s' % host)
 
     #
     # Debug & heartbeat pages

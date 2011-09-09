@@ -39,6 +39,7 @@ https://wiki.mozilla.org/index.php?title=Services/Sync/Server/GlobalConfFile
 """
 import re
 import os
+from copy import copy
 from ConfigParser import RawConfigParser
 from services.exceptions import EnvironmentNotFoundError
 
@@ -103,24 +104,6 @@ class SvcConfigParser(RawConfigParser):
                 extends = [extends]
             for file_ in extends:
                 self._extend(file_)
-
-        # `self._sections` is a dictionary of all the sections and settings.
-        # It's maybe a little dirty relying on and manipulating a ConfigParser
-        # internal data structure here, but it's exactly what we need, and it
-        # won't be hard to change this code if the internal structure ever
-        # changes.
-        #
-        # Handle the 'multi-config' sections
-        sections = self._sections
-        for section in sections:
-            if ':' not in section:
-                continue
-            prefix = section.split(':')[0]
-            if prefix in sections:
-                # start w/ parent section so more specific wins
-                merged = sections[prefix].copy()
-                merged.update(sections[section])
-                sections[section] = merged
 
     def _serialize(self, value):
         """values are serialized on every set"""
@@ -190,11 +173,14 @@ class Config(dict):
     application config dictionary, or subclasses can be provided which know how
     to extract app config info from other formats or contexts.
     """
+    splitchar = '.'
+
     def __init__(self, cfgdict=None, cfgfile=None):
         if cfgdict is not None:
             self.load_config(cfgdict)
         if cfgfile is not None:
             self.load_from_file(cfgfile)
+        self._merge_cache = dict()
 
     def load_config(self, cfgdict):
         """
@@ -244,16 +230,34 @@ class Config(dict):
         """
         sec_cfg = dict()
         default = section == ''
-        splitchar = '.'
-        replacer = '_'
         for key, value in self.items():
-            if splitchar not in key and not default:
+            if self.splitchar not in key and not default:
                 continue
             skey = key
-            if splitchar in key:
-                skey = skey.split(splitchar)
+            if self.splitchar in key:
+                skey = skey.split(self.splitchar)
                 if skey[0] != section:
                     continue
-                skey = replacer.join(skey[1:])
+                skey = self.splitchar.join(skey[1:])
             sec_cfg[skey] = value
         return sec_cfg
+
+    def merge(self, *sections):
+        """
+        Merge settings from the specified sections into other sections as
+        determined by the splitchar prefix in the specified sections.
+        """
+        if sections in self._merge_cache:
+            return self._merge_cache[sections]
+        ret = copy(self)
+        for section in sections:
+            section_map = self.get_section(section)
+            for k, v in section_map.items():
+                if self.splitchar not in k:
+                    continue
+                ret[k] = v
+        self._merge_cache[sections] = ret
+        return ret
+
+    def clear_merge_cache(self):
+        self._merge_cache = dict()

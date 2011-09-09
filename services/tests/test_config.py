@@ -91,13 +91,13 @@ c = d
 e = f
 g = h
 
-[storage:once]
-i = j
-k = l
+[multi:once]
+storage.i = j
+storage.k = l
 
-[storage:thrice]
-i = jjj
-k = lll
+[multi:thrice]
+storage.i = jjj
+storage.k = lll
 """
 
 _EXTRA = """\
@@ -182,7 +182,7 @@ class ConfigTestCase(unittest.TestCase):
         finally:
             os.remove(filename)
 
-    def test_multiconfig(self):
+    def test_config_merge(self):
         config = Config(cfgfile=self.file_four)
         global_ = {'foo': 'bar', 'baz': 'bawlp'}
         self.assertEqual(config.get_section(''), dict())
@@ -201,18 +201,28 @@ class ConfigTestCase(unittest.TestCase):
 
         storage_once = {'i': 'j', 'k': 'l'}
         storage_once.update(storage)
-        self.assertEqual(config['storage:once.e'], 'f')
-        self.assertEqual(config['storage:once.g'], 'h')
-        self.assertEqual(config['storage:once.i'], 'j')
-        self.assertEqual(config['storage:once.k'], 'l')
-        self.assertEqual(config.get_section('storage:once'),
+        once_merged = config.merge('multi:once')
+        self.assertEqual(once_merged.get_section('storage'),
                          storage_once)
 
         storage_thrice = {'i': 'jjj', 'k': 'lll'}
         storage_thrice.update(storage)
-        self.assertEqual(config['storage:thrice.e'], 'f')
-        self.assertEqual(config['storage:thrice.g'], 'h')
-        self.assertEqual(config['storage:thrice.i'], 'jjj')
-        self.assertEqual(config['storage:thrice.k'], 'lll')
-        self.assertEqual(config.get_section('storage:thrice'),
+        thrice_merged = config.merge('multi:thrice')
+        self.assertEqual(thrice_merged.get_section('storage'),
+                         storage_thrice)
+
+        # merge cache should guarantee same result
+        config['storage.m'] = 'n'
+        config['multi:thrice.storage.o'] = 'ppp'
+        thrice_merged = config.merge('multi:thrice')
+        self.assertEqual(thrice_merged.get_section('storage'),
+                         storage_thrice)
+
+        # but not after merge cache is cleared
+        config.clear_merge_cache()
+        thrice_merged = config.merge('multi:thrice')
+        self.assertNotEqual(thrice_merged.get_section('storage'),
+                            storage_thrice)
+        storage_thrice.update(dict(m='n', o='ppp'))
+        self.assertEqual(thrice_merged.get_section('storage'),
                          storage_thrice)
