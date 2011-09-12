@@ -129,6 +129,10 @@ class TestUtil(unittest.TestCase):
             return returnNum(4)
 
         with warnings.catch_warnings(record=True) as w:
+            #  Re-enable any warnings that might be suppressed.
+            #  The context manager will undo this for us at the end.
+            warnings.simplefilter("default")
+
             result = return1()
             self.assertEqual(result, 2)
             self.assertEqual(len(w), 1)

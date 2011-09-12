@@ -63,19 +63,19 @@ def send_email(sender, rcpt, subject, body, smtp_host='localhost',
         tuple: (True or False, Error Message)
     """
     # preparing the message
-    msg = MIMEText(body.encode('utf8'), 'plain', 'utf8')
+    msg = MIMEText(body.encode('utf-8'), 'plain', 'utf8')
 
     def _normalize_realname(field):
         address = AddressList(field).addresslist
         if len(address) == 1:
             realname, email = address[0]
             if realname != '':
-                return '%s <%s>' % (str(Header(realname, 'utf8')), str(email))
+                return '%s <%s>' % (str(Header(realname, 'utf-8')), str(email))
         return field
 
     msg['From'] = _normalize_realname(sender)
     msg['To'] = _normalize_realname(rcpt)
-    msg['Subject'] = Header(subject, 'utf8')
+    msg['Subject'] = Header(subject, 'utf-8')
 
     try:
         server = smtplib.SMTP(smtp_host, smtp_port, timeout=5)
