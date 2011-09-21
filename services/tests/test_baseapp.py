@@ -81,6 +81,14 @@ class _Foo(object):
         return '|%s|' % request.user.get('username', None)
 
 
+class Mod1(object):
+    pass
+
+
+class Mod2(object):
+    pass
+
+
 class TestBaseApp(unittest.TestCase):
 
     urls = [('POST', '/', 'foo', 'index'),
@@ -92,7 +100,11 @@ class TestBaseApp(unittest.TestCase):
     controllers = {'foo': _Foo}
     config = {'host:here.one.two': 1,
               'one.two': 2,
-              'auth.backend': 'services.auth.dummy.DummyAuth'}
+              'auth.backend': 'services.auth.dummy.DummyAuth',
+              'app.modules': ['mod1', 'mod2'],
+              'mod1.backend': 'services.tests.test_baseapp.Mod1',
+              'mod2.backend': 'services.tests.test_baseapp.Mod2',
+              }
 
     def setUp(self):
         self.app = SyncServerApp(self.urls, self.controllers, self.config)
@@ -361,6 +373,12 @@ class TestBaseApp(unittest.TestCase):
 
         # and we should have had no ping
         self.assertEquals(pings, [])
+
+    def test_modules_loaded(self):
+        mod1 = self.app.modules['mod1']
+        mod2 = self.app.modules['mod2']
+        self.assertEqual(mod1.__class__, Mod1)
+        self.assertEqual(mod2.__class__, Mod2)
 
 
 def test_suite():

@@ -57,6 +57,7 @@ from services import logger
 from services.config import Config
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
+from services.pluginreg import load_and_configure
 from services.user import User
 
 
@@ -87,6 +88,11 @@ class SyncServerApp(object):
         # check if we want to clean when the app ends
         self.sigclean = self.config.get('global.clean_shutdown', True)
 
+        self.modules = dict()
+        for module in self.config.get('app.modules', []):
+            self.modules[module] = load_and_configure(self.config, module)
+
+        # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
         self.auth = None if auth_class is None else auth_class(self.config)
 
