@@ -38,12 +38,6 @@
 from ConfigParser import Error
 
 
-_TMP = """\
-%s on %s
-
-%s"""
-
-
 class BackendError(Exception):
     """Raised when the backend is down or fails"""
     def __init__(self, msg='', server='', retry_after=None,
