@@ -121,7 +121,10 @@ class Authentication(object):
 
             # let's try an authentication
             # the authenticate_user API takes a unicode UTF-8 for the password
-            password = password.decode('utf8')
+            try:
+                password = password.decode('utf8')
+            except UnicodeDecodeError:
+                raise HTTPUnauthorized()
 
             #first we need to figure out if this is old-style or new-style auth
             if hasattr(self.backend, 'generate_reset_code'):

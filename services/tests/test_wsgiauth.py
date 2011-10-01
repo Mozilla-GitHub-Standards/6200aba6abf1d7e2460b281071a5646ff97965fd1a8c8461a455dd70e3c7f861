@@ -1,3 +1,4 @@
+# -*- encoding: utf8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -122,3 +123,17 @@ class AuthenticationTestCase(unittest.TestCase):
                            'cef.product': 'test',
                            'cef.file': 'test',
                             }, 'tarekbad')
+
+    def test_bad_password(self):
+        config = Config({'auth.backend':
+                         'services.tests.test_wsgiauth.AuthTool'})
+        auth = Authentication(config)
+
+        password = u'И'.encode('cp866')
+        token = 'tarek:%s' % password
+        token = 'Basic ' + base64.b64encode(token)
+        req = Request('/1.0/tarek/info/collections',
+                     {'HTTP_AUTHORIZATION': token})
+
+        self.assertRaises(HTTPUnauthorized, auth.authenticate_user, req,
+                          {})
