@@ -92,7 +92,8 @@ class LDAPAuth(ResetCodeManager):
                  reset_on_return=True, single_box=False, ldap_timeout=-1,
                  nodes_scheme='https', check_account_state=True,
                  create_tables=False, ldap_pool_size=10, ldap_use_pool=False,
-                 connector_cls=StateConnector, check_node=False, **kw):
+                 connector_cls=StateConnector, check_node=False,
+                 ldap_max_lifetime=600, **kw):
         self.check_account_state = check_account_state
         self.ldapuri = ldapuri
         self.sqluri = sqluri
@@ -111,7 +112,8 @@ class LDAPAuth(ResetCodeManager):
                                       use_tls=use_tls, timeout=ldap_timeout,
                                       size=ldap_pool_size,
                                       use_pool=ldap_use_pool,
-                                      connector_cls=connector_cls)
+                                      connector_cls=connector_cls,
+                                      max_lifetime=ldap_max_lifetime)
         sqlkw = {'pool_size': int(pool_size),
                  'pool_recycle': int(pool_recycle),
                  'logging_name': 'weaveserver'}
