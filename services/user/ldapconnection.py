@@ -42,7 +42,7 @@ from threading import RLock
 from ldap.ldapobject import ReconnectLDAPObject
 import ldap
 
-from services.util import BackendError, BackendTimeoutError
+from services.util import BackendError
 
 
 class MaxConnectionReachedError(Exception):
@@ -141,21 +141,24 @@ class ConnectionManager(object):
             while tries < self.retry_max and not connected:
                 try:
                     conn.simple_bind_s(bind, passwd)
-                except ldap.TIMEOUT, e:
-                    raise BackendTimeoutError(str(e))
-                except (ldap.SERVER_DOWN, ldap.OTHER), e:
-                    try:
-                        conn.unbind_ext_s()
-                    except ldap.LDAPError:
-                        # invalid connection
-                        pass
+                except (ldap.SERVER_DOWN, ldap.TIMEOUT), e:
+                    # the server seems down, we can retry
                     time.sleep(self.retry_delay)
                     tries += 1
+                except (ldap.INVALID_CREDENTIALS, ldap.INVALID_DN_SYNTAX):
+                    raise
+                except ldap.LDAPError, e:
+                    # invalid connection, or unknown error should die
+                    raise BackendError(str(e))
                 else:
                     # we're good
                     connected = True
 
+            # we failed
             if not connected:
+                if isinstance(e, ldap.SERVER_DOWN):
+                    # we need to unbind in that case
+                    conn.unbind_s()
                 raise BackendError(str(e))
 
         conn.active = True

@@ -59,6 +59,10 @@ def _bind_fails(self, who='', cred='', **kw):
     raise ldap.LDAPError('LDAP connection invalid')
 
 
+def _bind_fails2(self, who='', cred='', **kw):
+    raise ldap.SERVER_DOWN('LDAP connection invalid')
+
+
 class TestLDAPConnection(unittest.TestCase):
 
     def setUp(self):
@@ -130,8 +134,14 @@ class TestLDAPConnection(unittest.TestCase):
         if not LDAP:
             return
 
+        unbinds = []
+
+        def _unbind(self):
+            unbinds.append(1)
+
         # the binding fails with an LDAPError
-        StateConnector.simple_bind_s = _bind_fails
+        StateConnector.simple_bind_s = _bind_fails2
+        StateConnector.unbind_s = _unbind
         uri = ''
         dn = 'uid=adminuser,ou=logins,dc=mozilla'
         passwd = 'adminuser'
@@ -145,3 +155,6 @@ class TestLDAPConnection(unittest.TestCase):
             pass
         else:
             raise AssertionError()
+
+        # make sure we did unbind
+        self.assertEqual(len(unbinds), 1)
