@@ -47,7 +47,23 @@ from services.user import User, extract_username
 
 
 class Authentication(object):
-    """Authentication tool. defines the authentication strategy"""
+    """Authentication tool. Defines the authentication strategy.
+
+    Each services application can use a subclass of "Authentication" to define
+    its own authentication strategy.  The class must provide two methods:
+
+        * check(request, match):  check whether auth is required, extract and
+                                  verify credentials, and possibly raise an
+                                  error if auth fails.
+
+        * acknowledge(request, response):  add headers to the response to
+                                           acknowledge successful auth.
+
+    The base class implementation uses HTTP-Basic-Auth to authenticate
+    users.  New applications should consider using the "WhoAuthentication"
+    class from services.whoauth, which uses repoze.who to provide a pluggable
+    authentication stack.
+    """
     def __init__(self, config):
         self.config = config
         self.backend = load_and_configure(self.config, 'auth')
@@ -55,9 +71,8 @@ class Authentication(object):
     def check(self, request, match):
         """Checks if the current request/match can be viewed.
 
-        This function can raise an UnauthorizedError, or
-        redirect to a login page.
-
+        This function can raise HTTPUnauthorized, or redirect to a
+        login page.
         """
         if match.get('auth') != 'True':
             return
@@ -70,6 +85,14 @@ class Authentication(object):
             raise HTTPUnauthorized(headerlist=headers)
 
         match['user_id'] = user_id
+
+    def acknowledge(self, request, response):
+        """Acknowledges successful auth back to the user.
+
+        This method might send a HTTP Authentication-Info header or set a
+        cookie allowing the client to remember its login session.
+        """
+        pass
 
     def authenticate_user(self, request, config, username=None):
         """Authenticates a user and returns his id.

@@ -46,7 +46,7 @@ from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
 from services.wsgiauth import Authentication
 from services.tests.support import make_request
 
-from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable
+from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable, HTTPNotFound
 
 
 class _Foo(object):
@@ -71,6 +71,9 @@ class _Foo(object):
     def user(self, request):
         return '|%s|' % request.user.get('username', None)
 
+    def missing(self, request):
+        raise HTTPNotFound(request)
+
 
 class Mod1(object):
     pass
@@ -85,6 +88,7 @@ class TestBaseApp(unittest.TestCase):
     urls = [('POST', '/', 'foo', 'index'),
             ('GET', '/secret', 'foo', 'secret', {'auth': True}),
             ('GET', '/user/{username:[a-zA-Z0-9._-]+}', 'foo', 'user'),
+            ('GET', '/missing', 'foo', 'missing'),
             ('GET', '/boom', 'foo', 'boom'),
             ('GET', '/boom2', 'foo', 'boom2'),
             ('GET', '/boom3', 'foo', 'boom3')]
@@ -96,9 +100,11 @@ class TestBaseApp(unittest.TestCase):
               'mod1.backend': 'services.tests.test_baseapp.Mod1',
               'mod2.backend': 'services.tests.test_baseapp.Mod2',
               }
+    auth_class = None
 
     def setUp(self):
-        self.app = SyncServerApp(self.urls, self.controllers, self.config)
+        self.app = SyncServerApp(self.urls, self.controllers, self.config,
+                                 auth_class=self.auth_class)
 
     def test_host_config(self):
         request = make_request("/", method='POST', host='localhost')
@@ -110,27 +116,10 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(res.body, '1')
 
     def test_auth(self):
-        # we don't have any auth by default
+        """Test authentication using the specific auth class."""
+        # we don't have any auth, this should just work
         request = make_request("/secret", method='GET')
         res = self.app(request)
-        self.assertEqual(res.body, 'here')
-
-        # now let's add an auth
-        app = SyncServerApp(self.urls, self.controllers,
-                            self.config, auth_class=Authentication)
-        request = make_request("/secret", method='GET')
-
-        try:
-            app(request)
-        except HTTPUnauthorized, error:
-            self.assertEqual(error.headers['WWW-Authenticate'],
-                             'Basic realm="Sync"')
-        else:
-            raise AssertionError('Excepted a failure here')
-
-        auth = 'Basic %s' % base64.b64encode('tarek:tarek')
-        request.environ['HTTP_AUTHORIZATION'] = auth
-        res = app(request)
         self.assertEqual(res.body, 'here')
 
     def test_retry_after(self):
@@ -141,7 +130,8 @@ class TestBaseApp(unittest.TestCase):
                 ('GET', '/boom3', 'foo', 'boom3')]
 
         controllers = {'foo': _Foo}
-        app = SyncServerApp(urls, controllers, config)
+        app = SyncServerApp(urls, controllers, config,
+                            auth_class=self.auth_class)
 
         request = make_request("/boom", method="GET", host="localhost")
         try:
@@ -192,7 +182,8 @@ class TestBaseApp(unittest.TestCase):
         controllers = {}
 
         # testing the default configuration
-        app = SyncServerApp(urls, controllers, config)
+        app = SyncServerApp(urls, controllers, config,
+                            auth_class=self.auth_class)
 
         # a heartbeat returns a 200 / empty body
         request = make_request("/__heartbeat__")
@@ -223,7 +214,7 @@ class TestBaseApp(unittest.TestCase):
                 raise HTTPServiceUnavailable()
 
         # testing that new app
-        app = MyCoolApp(urls, controllers, config)
+        app = MyCoolApp(urls, controllers, config, auth_class=self.auth_class)
 
         # a heartbeat returns a 503 / empty body
         request = make_request("/__heartbeat__")
@@ -241,6 +232,15 @@ class TestBaseApp(unittest.TestCase):
         res = self.app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("|testuser|" in res.body)
+
+    def test_notfound(self):
+        # test that non-existent pages raise a 404.
+        # this one has no match, so it will return early
+        request = make_request("/nonexistent")
+        self.assertEquals(self.app(request).status, "404 Not Found")
+        # this one has a match, will raise from below the auth handler
+        request = make_request("/missing")
+        self.assertRaises(HTTPNotFound, self.app, request)
 
     def test_events(self):
 
@@ -260,7 +260,8 @@ class TestBaseApp(unittest.TestCase):
                       'auth.backend': 'services.auth.dummy.DummyAuth'}
             urls = []
             controllers = {}
-            app = SyncServerApp(urls, controllers, config)
+            app = SyncServerApp(urls, controllers, config,
+                                auth_class=self.auth_class)
             request = make_request("/user/__hearbeat__")
             app(request)
         finally:
@@ -296,7 +297,8 @@ class TestBaseApp(unittest.TestCase):
 
             urls = []
             controllers = {}
-            app = SyncServerApp(urls, controllers, config)
+            app = SyncServerApp(urls, controllers, config,
+                                auth_class=self.auth_class)
 
             # heartbeat should work
             request = make_request("/__heartbeat__")
@@ -354,7 +356,8 @@ class TestBaseApp(unittest.TestCase):
 
             urls = []
             controllers = {}
-            app = SyncServerApp(urls, controllers, config)
+            app = SyncServerApp(urls, controllers, config,
+                                auth_class=self.auth_class)
 
             # heartbeat should work
             request = make_request("/__heartbeat__")
@@ -373,9 +376,32 @@ class TestBaseApp(unittest.TestCase):
         self.assertEqual(mod2.__class__, Mod2)
 
 
+class TestBaseApp_Auth(TestBaseApp):
+
+    auth_class = Authentication
+
+    def test_auth(self):
+        # it should ask us to authenticate using HTTP-Basic-Auth
+        request = make_request("/secret", method='GET')
+        try:
+            self.app(request)
+        except HTTPUnauthorized, error:
+            self.assertEqual(error.headers['WWW-Authenticate'],
+                             'Basic realm="Sync"')
+        else:
+            raise AssertionError('Excepted a failure here')
+
+        # it should accept credentials using HTTP-Basic-Auth
+        auth = 'Basic %s' % base64.b64encode('tarek:tarek')
+        request.environ['HTTP_AUTHORIZATION'] = auth
+        res = self.app(request)
+        self.assertEqual(res.body, 'here')
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestBaseApp))
+    suite.addTest(unittest.makeSuite(TestBaseApp_Auth))
     return suite
 
 

@@ -48,7 +48,7 @@ from paste.exceptions.errormiddleware import ErrorMiddleware
 from routes import Mapper
 
 from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPServiceUnavailable
+from webob.exc import HTTPNotFound, HTTPServiceUnavailable, HTTPException
 from webob import Response
 
 from services.util import (CatchErrorMiddleware, round_time, BackendError,
@@ -204,6 +204,7 @@ class SyncServerApp(object):
     @wsgify
     @_notified
     def __call__(self, request):
+        """Entry point for the WSGI app."""
         # the app is being killed, no more requests please
         if self.killing:
             raise HTTPServiceUnavailable()
@@ -216,6 +217,24 @@ class SyncServerApp(object):
         # pre-hook
         before_headers = self._before_call(request)
 
+        try:
+            response = self._dispatch_request(request)
+        except HTTPException, response:
+            # set before-call headers on all responses
+            response.headers.update(before_headers)
+            raise
+        else:
+            # set X-Weave-Timestamp on success responses
+            response.headers['X-Weave-Timestamp'] = str(request.server_time)
+            response.headers.update(before_headers)
+            return response
+
+    def _dispatch_request(self, request):
+        """Dispatch the request.
+
+        This will dispatch the request either to a special internal handler
+        or to one of the configured controller methods.
+        """ 
         # XXX
         # removing the trailing slash - ambiguity on client side
         url = request.path_info.rstrip('/')
@@ -233,9 +252,11 @@ class SyncServerApp(object):
                 request.method in ('HEAD', 'GET')):
                 return self._heartbeat(request)
 
+        # the debug page is called
         if self.debug_page is not None and url == '/%s' % self.debug_page:
             return self._debug(request)
 
+        # the request must be going to a controller method
         match = self.mapper.routematch(environ=request.environ)
 
         if match is None:
@@ -243,10 +264,22 @@ class SyncServerApp(object):
 
         match, __ = match
 
-        # authentication control
-        if self.auth is not None:
+        # if auth is enabled, wrap it around the call to the controller
+        if self.auth is None:
+            return self._dispatch_request_with_match(request, match)
+        else:
             self.auth.check(request, match)
+            try:
+                response = self._dispatch_request_with_match(request, match)
+            except HTTPException, response:
+                self.auth.acknowledge(request, response)
+                raise
+            else:
+                self.auth.acknowledge(request, response)
+                return response
 
+    def _dispatch_request_with_match(self, request, match):
+        """Dispatch a request according to a URL routing match."""
         function = self._get_function(match['controller'], match['action'])
         if function is None:
             raise HTTPNotFound('Unknown URL %r' % request.path_info)
@@ -287,10 +320,6 @@ class SyncServerApp(object):
 
         # create the response object in case we get back a string
         response = self._create_response(request, result, function)
-
-        # setting up the X-Weave-Timestamp
-        response.headers['X-Weave-Timestamp'] = str(request.server_time)
-        response.headers.update(before_headers)
         return response
 
     def _get_params(self, request):
