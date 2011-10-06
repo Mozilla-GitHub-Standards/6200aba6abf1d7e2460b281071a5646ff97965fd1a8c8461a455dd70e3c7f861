@@ -35,6 +35,7 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 from services.controllers import StandardController
+from services.tests.support import make_request
 
 
 _ENVIRON = {'HTTP_COOKIE': 'somecookie', 'SCRIPT_NAME': '',
@@ -108,15 +109,10 @@ _ENVIRON = {'HTTP_COOKIE': 'somecookie', 'SCRIPT_NAME': '',
       'HTTP_KEEP_ALIVE': '115'}
 
 
-class _Request(object):
-    def __init__(self):
-        self.environ = _ENVIRON
-
-
 class TestStandardController(unittest.TestCase):
 
     def test_obfuscation(self):
-        req = _Request()
+        req = make_request("/__debug__", _ENVIRON)
         controller = StandardController(None)
 
         def _more_secret(*args):

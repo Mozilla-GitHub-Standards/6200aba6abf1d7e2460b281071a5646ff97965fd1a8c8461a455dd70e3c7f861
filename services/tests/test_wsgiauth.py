@@ -42,13 +42,7 @@ from webob.exc import HTTPUnauthorized
 from services.config import Config
 from services.wsgiauth import Authentication
 from services.auth.dummy import DummyAuth
-
-
-class Request(object):
-
-    def __init__(self, path_info, environ):
-        self.path_info = path_info
-        self.environ = environ
+from services.tests.support import make_request
 
 
 class AuthTool(DummyAuth):
@@ -76,8 +70,8 @@ class AuthenticationTestCase(unittest.TestCase):
                   'services.tests.test_wsgiauth.ColonPasswordAuthTool'})
         auth = Authentication(config)
         token = 'Basic ' + base64.b64encode('user:pass:word:')
-        req = Request('/1.0/tarek/info/collections',
-                {'HTTP_AUTHORIZATION': token})
+        req = make_request('/1.0/tarek/info/collections',
+                            {'HTTP_AUTHORIZATION': token})
         res = auth.authenticate_user(req, {})
         self.assertEquals(res, 1)
 
@@ -87,34 +81,34 @@ class AuthenticationTestCase(unittest.TestCase):
                          'services.tests.test_wsgiauth.AuthTool'})
         auth = Authentication(config)
         token = 'Basic ' + base64.b64encode('tarek:tarek')
-        req = Request('/1.0/tarek/info/collections', {})
+        req = make_request('/1.0/tarek/info/collections', {})
         res = auth.authenticate_user(req, {})
         self.assertEquals(res, None)
 
         # authenticated by auth
-        req = Request('/1.0/tarek/info/collections',
-                {'HTTP_AUTHORIZATION': token})
+        req = make_request('/1.0/tarek/info/collections',
+                           {'HTTP_AUTHORIZATION': token})
         res = auth.authenticate_user(req, {})
         self.assertEquals(res, 1)
 
         # weird tokens should not break the function
         bad_token1 = 'Basic ' + base64.b64encode('tarektarek')
         bad_token2 = 'Basic' + base64.b64encode('tarek:tarek')
-        req = Request('/1.0/tarek/info/collections',
-                {'HTTP_AUTHORIZATION': bad_token1})
+        req = make_request('/1.0/tarek/info/collections',
+                           {'HTTP_AUTHORIZATION': bad_token1})
 
         self.assertRaises(HTTPUnauthorized, auth.authenticate_user, req,
                           {})
-        req = Request('/1.0/tarek/info/collections',
-                {'HTTP_AUTHORIZATION': bad_token2})
+        req = make_request('/1.0/tarek/info/collections',
+                           {'HTTP_AUTHORIZATION': bad_token2})
         self.assertRaises(HTTPUnauthorized, auth.authenticate_user, req,
                           {})
         # check a bad request to an invalid user.
-        req = Request('/1.0/tarekbad',
-                      {'HTTP_AUTHORIZATION': 'Basic ' +
-                       base64.b64encode('tarekbad:tarek'),
-                       'REQUEST_METHOD': 'TEST',
-                       'PATH_INFO': 'TEST'})
+        req = make_request('/1.0/tarekbad',
+                           {'HTTP_AUTHORIZATION': 'Basic ' +
+                            base64.b64encode('tarekbad:tarek'),
+                            'REQUEST_METHOD': 'TEST',
+                            'PATH_INFO': 'TEST'})
         # the following options are required for cef dependency
         self.assertRaises(HTTPUnauthorized, auth.authenticate_user, req,
                           {'cef.version': '0.0',
@@ -132,8 +126,8 @@ class AuthenticationTestCase(unittest.TestCase):
         password = u'И'.encode('cp866')
         token = 'tarek:%s' % password
         token = 'Basic ' + base64.b64encode(token)
-        req = Request('/1.0/tarek/info/collections',
-                     {'HTTP_AUTHORIZATION': token})
+        req = make_request('/1.0/tarek/info/collections',
+                           {'HTTP_AUTHORIZATION': token})
 
         self.assertRaises(HTTPUnauthorized, auth.authenticate_user, req,
                           {})

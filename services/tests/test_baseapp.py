@@ -44,18 +44,9 @@ from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
                              unsubscribe, APP_ENDS)
 from services.wsgiauth import Authentication
+from services.tests.support import make_request
 
 from webob.exc import HTTPUnauthorized, HTTPServiceUnavailable
-
-
-class _Request(object):
-    def __init__(self, method, path_info, host):
-        self.method = method
-        self.path_info = path_info
-        self.host = host
-        self.GET = {}
-        self.environ = {'PATH_INFO': path_info,
-                        'REQUEST_METHOD': method}
 
 
 class _Foo(object):
@@ -110,24 +101,24 @@ class TestBaseApp(unittest.TestCase):
         self.app = SyncServerApp(self.urls, self.controllers, self.config)
 
     def test_host_config(self):
-        request = _Request('POST', '/', 'localhost')
+        request = make_request("/", method='POST', host='localhost')
         res = self.app(request)
         self.assertEqual(res.body, '2')
 
-        request = _Request('POST', '/', 'here')
+        request = make_request("/", method='POST', host='here')
         res = self.app(request)
         self.assertEqual(res.body, '1')
 
     def test_auth(self):
         # we don't have any auth by default
-        request = _Request('GET', '/secret', 'localhost')
+        request = make_request("/secret", method='GET')
         res = self.app(request)
         self.assertEqual(res.body, 'here')
 
         # now let's add an auth
         app = SyncServerApp(self.urls, self.controllers,
                             self.config, auth_class=Authentication)
-        request = _Request('GET', '/secret', 'localhost')
+        request = make_request("/secret", method='GET')
 
         try:
             app(request)
@@ -151,7 +142,8 @@ class TestBaseApp(unittest.TestCase):
 
         controllers = {'foo': _Foo}
         app = SyncServerApp(urls, controllers, config)
-        request = _Request('GET', '/boom', 'localhost')
+
+        request = make_request("/boom", method="GET", host="localhost")
         try:
             app(request)
         except HTTPServiceUnavailable, error:
@@ -160,7 +152,7 @@ class TestBaseApp(unittest.TestCase):
             raise AssertionError()
 
         # default retry_after value
-        request = _Request('GET', '/boom2', 'localhost')
+        request = make_request("/boom2", method="GET", host="localhost")
         try:
             app(request)
         except HTTPServiceUnavailable, error:
@@ -169,7 +161,7 @@ class TestBaseApp(unittest.TestCase):
             raise AssertionError()
 
         # no retry-after (set to -1)
-        request = _Request('GET', '/boom3', 'localhost')
+        request = make_request("/boom3", method="GET", host="localhost")
         old = logger.error
         errors = []
 
@@ -203,19 +195,19 @@ class TestBaseApp(unittest.TestCase):
         app = SyncServerApp(urls, controllers, config)
 
         # a heartbeat returns a 200 / empty body
-        request = _Request('GET', '/__heartbeat__', 'localhost')
+        request = make_request("/__heartbeat__")
         res = app(request)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.body, '')
 
         # we can get heartbeats with a HEAD call
-        request = _Request('HEAD', '/__heartbeat__', 'localhost')
+        request = make_request("/__heartbeat__", method="HEAD")
         res = app(request)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.body, '')
 
         # the debug page returns a 200 / info in the body
-        request = _Request('GET', '/__debug__', 'localhost')
+        request = make_request("/__debug__")
         res = app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("'REQUEST_METHOD': 'GET'" in res.body)
@@ -234,18 +226,18 @@ class TestBaseApp(unittest.TestCase):
         app = MyCoolApp(urls, controllers, config)
 
         # a heartbeat returns a 503 / empty body
-        request = _Request('GET', '/__heartbeat__', 'localhost')
+        request = make_request("/__heartbeat__")
         self.assertRaises(HTTPServiceUnavailable, app, request)
 
         # the debug page returns a 200 / info in the body
-        request = _Request('GET', '/__debug__', 'localhost')
+        request = make_request("/__debug__")
         res = app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("DEEBOOG" in res.body)
 
     def test_user(self):
         # the debug page returns a the right username in the body
-        request = _Request('GET', '/user/testuser', 'localhost')
+        request = make_request("/user/testuser")
         res = self.app(request)
         self.assertEqual(res.status_int, 200)
         self.assertTrue("|testuser|" in res.body)
@@ -269,7 +261,7 @@ class TestBaseApp(unittest.TestCase):
             urls = []
             controllers = {}
             app = SyncServerApp(urls, controllers, config)
-            request = _Request('GET', '/__heartbeat__', 'localhost')
+            request = make_request("/user/__hearbeat__")
             app(request)
         finally:
             unsubscribe(REQUEST_STARTS, starts)
@@ -279,7 +271,7 @@ class TestBaseApp(unittest.TestCase):
 
     def test_crash_id(self):
         # getting a 50x should generate a crash id
-        request = _Request('GET', '/boom', 'localhost')
+        request = make_request("/boom")
         try:
             self.app(request)
         except HTTPServiceUnavailable, err:
@@ -307,7 +299,7 @@ class TestBaseApp(unittest.TestCase):
             app = SyncServerApp(urls, controllers, config)
 
             # heartbeat should work
-            request = _Request('GET', '/__heartbeat__', 'localhost')
+            request = make_request("/__heartbeat__")
             app(request)
 
             # let's "kill it" in a thread
@@ -324,18 +316,18 @@ class TestBaseApp(unittest.TestCase):
             sleep(0.2)
 
             # in the meantime, /heartbeat should return a 503
-            request = _Request('GET', '/__heartbeat__', 'localhost')
+            request = make_request("/__heartbeat__")
             self.assertRaises(HTTPServiceUnavailable, app, request)
 
             # but regular requests should still work
-            request = _Request('GET', '/', 'localhost')
+            request = make_request("/")
             app(request)
 
             # sleeping
             sleep(1.)
 
             # now / should 503 too
-            request = _Request('GET', '/', 'localhost')
+            request = make_request("/")
             self.assertRaises(HTTPServiceUnavailable, app, request)
 
             killer.join()
@@ -365,7 +357,7 @@ class TestBaseApp(unittest.TestCase):
             app = SyncServerApp(urls, controllers, config)
 
             # heartbeat should work
-            request = _Request('GET', '/__heartbeat__', 'localhost')
+            request = make_request("/__heartbeat__")
             app(request)
 
         finally:

@@ -43,6 +43,8 @@ import contextlib
 import logging
 from StringIO import StringIO
 
+from webob import Request
+
 from services.config import Config
 from services.pluginreg import load_and_configure
 
@@ -283,3 +285,25 @@ def mock_wsgi(callable=None, server='localhost', port=80):
         yield
     finally:
         remove(server, port)
+
+
+def make_request(path, environ=None, **kwds):
+    """Helper function to make stub Request objects.
+
+    This function creates a new Request object from the given path and
+    environment data, then sets any additional keyword arguments on the
+    object before returning it.  If you omit the environment then a
+    sensible default is calculated from the path.
+
+    Use it as a shortcut to build requests for testing, by specifying only
+    the information you care about.  Like so::
+
+        req = make_request("/", method="POST", host="here")
+
+    """
+    request = Request.blank(path, environ)
+    for (attr, value) in kwds.iteritems():
+        setattr(request, attr, value)
+    return request
+
+
