@@ -3,6 +3,8 @@ pyc$
 lib
 include
 bin
+man
+.channel
 Services.egg-info
 swp$
 html
