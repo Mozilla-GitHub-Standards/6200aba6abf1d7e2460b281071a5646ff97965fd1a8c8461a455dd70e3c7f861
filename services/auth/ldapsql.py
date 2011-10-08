@@ -249,6 +249,9 @@ class LDAPAuth(ResetCodeManager):
         """Authenticates a user given a user_name and password.
 
         Returns the user id in case of success. Returns None otherwise."""
+        if password is None or password == '':
+            return None
+
         dn = self._username2dn(user_name)
         if dn is None:
             # unknown user, we can return immediatly
