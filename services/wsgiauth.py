@@ -121,7 +121,10 @@ class Authentication(object):
 
             # let's try an authentication
             # the authenticate_user API takes a unicode UTF-8 for the password
-            password = password.decode('utf8')
+            try:
+                password = password.decode('utf8')
+            except UnicodeDecodeError:
+                raise HTTPUnauthorized()
 
             # XXX to be removed once we get the proper fix see bug #662859
             if hasattr(self.backend, 'check_node') and self.backend.check_node:
