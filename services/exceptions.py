@@ -41,7 +41,7 @@ from ConfigParser import Error
 class BackendError(Exception):
     """Raised when the backend is down or fails"""
     def __init__(self, msg='', server='', retry_after=None,
-                 backend=None):
+                 backend=None, request=None):
         """
         - msg, server will be dumped in str() if provided
         - retry_after, if set to a positive integer, will be used to send
@@ -56,6 +56,7 @@ class BackendError(Exception):
         self.server = server
         self.retry_after = retry_after
         self.backend = backend
+        self.request = request
 
     def __str__(self):
         res = self.__class__.__name__
@@ -65,6 +66,9 @@ class BackendError(Exception):
             res += '\n%s' % str(self.backend)
         if self.msg != '':
             res += '\n\n%s' % self.msg
+        if self.request is not None:
+            call = '%s %s' % (self.request.method, self.request.path_info)
+            res = call + '\n' + res
         return res
 
 

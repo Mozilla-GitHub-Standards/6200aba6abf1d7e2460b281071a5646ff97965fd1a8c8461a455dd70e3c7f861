@@ -47,6 +47,7 @@ from services.util import (function_moved, bigint2time, time2bigint,
                            batch, validate_password, ssha,
                            ssha256, valid_password, get_source_ip,
                            CatchErrorMiddleware, round_time)
+from services.exceptions import BackendError
 
 
 def return2():
@@ -281,3 +282,38 @@ class TestUtil(unittest.TestCase):
         # changing the precision
         res = round_time(129084.198271987, precision=3)
         self.assertEqual(str(res), '129084.198')
+
+
+    def test_request(self):
+
+        class BackEndFails(object):
+            from webob.dec import wsgify
+
+            @wsgify
+            def __call__(self, request):
+                raise BackendError("meh", request=request)
+
+        def hello():
+            return "hello"
+
+        def fake_start_response(*args):
+            pass
+
+        app = CatchErrorMiddleware(BackEndFails())
+        errs = []
+
+        def _error(err):
+            errs.append(err)
+
+        app.logger.error = _error
+        old_std = sys.stdout
+        sys.stdout = StringIO.StringIO()
+        try:
+            app({'REQUEST_METHOD': 'GET',
+                 'PATH_INFO': '/meh',
+                 'HTTP_HOST': 'blah.com'},
+                fake_start_response)
+        finally:
+            sys.stdout = old_std
+
+        self.assertTrue('GET /meh' in errs[1])
