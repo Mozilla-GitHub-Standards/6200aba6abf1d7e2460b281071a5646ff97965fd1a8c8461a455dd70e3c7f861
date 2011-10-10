@@ -82,7 +82,7 @@ class TestEmailer(unittest.TestCase):
             # let's load it
             mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['From'],
-                             '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+                           '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
 
             self.assertEqual(mail['To'],
                             'John Doe <someone@somewhere.com>')
@@ -123,7 +123,7 @@ class TestEmailer(unittest.TestCase):
             # let's load it
             mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['From'],
-                             '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+                           '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
             self.assertEqual(mail['To'], 'someone@somewhere.com')
         finally:
             smtplib.SMTP = old

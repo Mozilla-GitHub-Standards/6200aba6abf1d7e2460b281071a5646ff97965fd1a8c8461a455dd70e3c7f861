@@ -234,7 +234,7 @@ class SyncServerApp(object):
 
         This will dispatch the request either to a special internal handler
         or to one of the configured controller methods.
-        """ 
+        """
         # XXX
         # removing the trailing slash - ambiguity on client side
         url = request.path_info.rstrip('/')

@@ -283,7 +283,6 @@ class TestUtil(unittest.TestCase):
         res = round_time(129084.198271987, precision=3)
         self.assertEqual(str(res), '129084.198')
 
-
     def test_request(self):
 
         class BackEndFails(object):

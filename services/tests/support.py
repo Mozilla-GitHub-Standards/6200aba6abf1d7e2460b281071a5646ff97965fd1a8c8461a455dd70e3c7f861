@@ -305,5 +305,3 @@ def make_request(path, environ=None, **kwds):
     for (attr, value) in kwds.iteritems():
         setattr(request, attr, value)
     return request
-
-
