@@ -54,6 +54,8 @@ from services.util import (convert_config, bigint2time,
                            get_source_ip, CatchErrorMiddleware, round_time,
                            send_email, extract_node)
 
+from services.exceptions import BackendError
+
 
 _EXTRA = """\
 [some]
@@ -436,3 +438,37 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(extract_node(str1), ('basenode', {}))
         self.assertEqual(extract_node(str2), ('node', {'a': '1', 'b': '2'}))
         self.assertRaises(ValueError, extract_node, str3)
+
+    def test_request(self):
+
+        class BackEndFails(object):
+            from webob.dec import wsgify
+
+            @wsgify
+            def __call__(self, request):
+                raise BackendError("meh", request=request)
+
+        def hello():
+            return "hello"
+
+        def fake_start_response(*args):
+            pass
+
+        app = CatchErrorMiddleware(BackEndFails())
+        errs = []
+
+        def _error(err):
+            errs.append(err)
+
+        app.logger.error = _error
+        old_std = sys.stdout
+        sys.stdout = StringIO.StringIO()
+        try:
+            app({'REQUEST_METHOD': 'GET',
+                 'PATH_INFO': '/meh',
+                 'HTTP_HOST': 'blah.com'},
+                fake_start_response)
+        finally:
+            sys.stdout = old_std
+
+        self.assertTrue('GET /meh' in errs[1])
