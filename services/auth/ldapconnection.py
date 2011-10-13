@@ -91,6 +91,21 @@ class StateConnector(ReconnectLDAPObject):
         return self._apply_method_s(ReconnectLDAPObject.modify_s, *args,
                                     **kwargs)
 
+    def __str__(self):
+        res = 'LDAP Connector'
+        if self.connected:
+            res += ' (connected)'
+        else:
+            res += ' (disconnected)'
+
+        if self.who != '':
+            res += ' - who: %r' % self.who
+
+        if self._uri != '':
+            res += ' - uri: %r' % self._uri
+
+        return res
+
 
 class ConnectionManager(object):
     """LDAP Connection Manager.
@@ -163,31 +178,7 @@ class ConnectionManager(object):
             conn.start_tls_s()
 
         if bind is not None:
-            tries = 0
-            connected = False
-            e = None
-            while tries < self.retry_max and not connected:
-                try:
-                    conn.simple_bind_s(bind, passwd)
-                except (ldap.SERVER_DOWN, ldap.TIMEOUT), e:
-                    # the server seems down, we can retry
-                    time.sleep(self.retry_delay)
-                    tries += 1
-                except (ldap.INVALID_CREDENTIALS, ldap.INVALID_DN_SYNTAX):
-                    raise
-                except ldap.LDAPError, e:
-                    # invalid connection, or unknown error should die
-                    raise BackendError(str(e))
-                else:
-                    # we're good
-                    connected = True
-
-            # we failed
-            if not connected:
-                if isinstance(e, ldap.SERVER_DOWN):
-                    # we need to unbind in that case
-                    conn.unbind_s()
-                raise BackendError(str(e))
+            conn.simple_bind_s(bind, passwd)
 
         conn.active = True
 
@@ -198,11 +189,30 @@ class ConnectionManager(object):
             - bind: login
             - passwd: password
         """
+        tries = 0
+        connected = False
         passwd = passwd.encode('utf8')
-        conn = self.connector_cls(self.uri, retry_max=self.retry_max,
-                                  retry_delay=self.retry_delay)
-        conn.timeout = self.timeout
-        self._bind(conn, bind, passwd)
+        exc = None
+
+        # trying retry_max times in a row with a fresh connector
+        while tries < self.retry_max and not connected:
+            try:
+                conn = self.connector_cls(self.uri, retry_max=self.retry_max,
+                                          retry_delay=self.retry_delay)
+                conn.timeout = self.timeout
+                self._bind(conn, bind, passwd)
+                connected = True
+            except ldap.LDAPError, exc:
+                time.sleep(self.retry_delay)
+                tries += 1
+
+        if not connected:
+            if isinstance(exc, (ldap.NO_SUCH_OBJECT,
+                                ldap.INVALID_CREDENTIALS)):
+                raise exc
+
+            # that's something else
+            raise BackendError(str(exc), backend=conn)
         return conn
 
     def _get_connection(self, bind=None, passwd=None):
