@@ -160,14 +160,14 @@ class ConnectionManager(object):
 
             # no connector was available, let's rebind the latest inactive one
             if len(inactives) > 0:
-                conn = inactives[0]
-                try:
-                    self._bind(conn, bind, passwd)
-                except:
-                    self._pool.remove(conn)
-                    raise
+                for conn in inactives:
+                    try:
+                        self._bind(conn, bind, passwd)
+                        return conn
+                    except:
+                        self._pool.remove(conn)
 
-                return conn
+                return None
 
         # There are no connector that match
         return None

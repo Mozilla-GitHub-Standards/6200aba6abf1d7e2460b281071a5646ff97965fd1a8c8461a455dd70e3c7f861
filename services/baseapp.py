@@ -269,6 +269,7 @@ class SyncServerApp(object):
         try:
             result = function(request, **params)
         except BackendError as err:
+            err.request = request
             err_info = str(err)
             err_trace = traceback.format_exc()
             extra_info = ['%s: %s' % (key, value)
