@@ -1,3 +1,19 @@
+
+2.7 - 2011-10-18
+================
+
+Impacts:
+
+- Ops
+- QA
+
+Relevant changes:
+
+A whole lot. Reconfiguration of a whole bunch of libraries, including how we handle authentication, configuration and where utility functions live. Rewritten testing support libraries.
+
+Any product that moves to this core should check all functionality to see if anything breaks.
+
+
 2.1 - 2011-06-24
 ================
 
