@@ -38,9 +38,7 @@
 import unittest
 import smtplib
 from email import message_from_string
-from services.emailer import valid_email, send_email, SMTPEmail
-from services.pluginreg import load_and_configure
-from services.config import Config
+from services.emailer import valid_email, send_email
 
 
 class TestEmailer(unittest.TestCase):
@@ -71,11 +69,6 @@ class TestEmailer(unittest.TestCase):
             def quit(self):
                 pass
 
-        config = Config({'smtp.backend': 'services.emailer.SMTPEmail',
-                         'smtp.sender': u'Tarek Ziadé <tarek@mozilla.com>',
-                         'smtp.smtp_host': 'localhost'})
-
-        server = load_and_configure(config, 'smtp')
         subject = u"Hello there"
         body = u"ah yeah"
         old = smtplib.SMTP
@@ -89,22 +82,10 @@ class TestEmailer(unittest.TestCase):
             # let's load it
             mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['From'],
-                           '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+                             '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
 
             self.assertEqual(mail['To'],
                             'John Doe <someone@somewhere.com>')
-
-            # now with the class
-            server.send(u'John Doe <someone@somewhere.com>', subject, body)
-
-            # let's load it
-            mail = message_from_string(FakeMailer.mails[-1][-1])
-            self.assertEqual(mail['From'],
-                             '=?utf8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
-
-            self.assertEqual(mail['To'],
-                            'John Doe <someone@somewhere.com>')
-
 
             # simple e-mail
             send_email(u'<tarek@mozilla.com>',
@@ -114,12 +95,6 @@ class TestEmailer(unittest.TestCase):
             # let's load it
             mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['From'], '<tarek@mozilla.com>')
-            self.assertEqual(mail['To'], '<someone@somewhere.com>')
-
-            # simple e-mail with class
-            server.send(u'<someone@somewhere.com>', subject, body)
-
-            mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['To'], '<someone@somewhere.com>')
 
             # basic e-mail
@@ -132,12 +107,6 @@ class TestEmailer(unittest.TestCase):
             self.assertEqual(mail['From'], 'tarek@mozilla.com')
             self.assertEqual(mail['To'], 'someone@somewhere.com')
 
-            # basic e-mail with class
-            server.send(u'someone@somewhere.com', subject, body)
-
-            mail = message_from_string(FakeMailer.mails[-1][-1])
-            self.assertEqual(mail['To'], 'someone@somewhere.com')
-
             # XXX That should not happen
             # now what happens if we get strings
             send_email('tarek@mozilla.com', 'someone@somewhere.com',
@@ -148,24 +117,13 @@ class TestEmailer(unittest.TestCase):
             self.assertEqual(mail['From'], 'tarek@mozilla.com')
             self.assertEqual(mail['To'], 'someone@somewhere.com')
 
-            # now what happens if we get strings with class
-            server.send('someone@somewhere.com', subject, body)
-
-            # let's load it
-            mail = message_from_string(FakeMailer.mails[-1][-1])
-            self.assertEqual(mail['To'], 'someone@somewhere.com')
-
-
             send_email('Tarek Ziadé <tarek@mozilla.com>',
                        'someone@somewhere.com', subject, body)
 
             # let's load it
             mail = message_from_string(FakeMailer.mails[-1][-1])
             self.assertEqual(mail['From'],
-                           '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
+                             '=?utf-8?q?Tarek_Ziad=C3=A9?= <tarek@mozilla.com>')
             self.assertEqual(mail['To'], 'someone@somewhere.com')
-
-
-
         finally:
             smtplib.SMTP = old
