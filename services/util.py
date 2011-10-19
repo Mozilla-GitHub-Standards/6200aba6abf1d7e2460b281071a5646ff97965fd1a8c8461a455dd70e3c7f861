@@ -313,7 +313,8 @@ class CatchErrorMiddleware(object):
             response = json.dumps("application error: crash id %s" % hash)
             if self.hook:
                 try:
-                    response = self.hook({'error': err, 'crash_id': hash})
+                    response = self.hook({'error': err, 'crash_id': hash,
+                                          'app': self.app})
                 except TypeError:
                     # try the old way
                     msg = ("hooks now receive a dict containing information "
