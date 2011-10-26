@@ -1,7 +1,7 @@
 %define name python26-services
 %define pythonname Services
-%define version 2.6.5
-%define unmangled_version 2.6.5
+%define version 2.6.6
+%define unmangled_version 2.6.6
 %define release 1
 
 Summary: Services core tools
