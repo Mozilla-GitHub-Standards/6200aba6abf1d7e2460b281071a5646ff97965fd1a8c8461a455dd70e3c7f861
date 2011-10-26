@@ -70,7 +70,8 @@ class StateConnector(ReconnectLDAPObject):
         self.connected = True
         self.who = who
         self.cred = cred
-        self._connection_time = time.time()
+        if self._connection_time is None:
+            self._connection_time = time.time()
         return res
 
     def unbind_ext_s(self, serverctrls=None, clientctrls=None):
@@ -81,7 +82,6 @@ class StateConnector(ReconnectLDAPObject):
             self.connected = False
             self.who = None
             self.cred = None
-            self._connection_time = None
 
     def add_s(self, *args, **kwargs):
         return self._apply_method_s(ReconnectLDAPObject.add_s, *args,
@@ -147,7 +147,11 @@ class ConnectionManager(object):
                 if conn.get_lifetime() > self.max_lifetime:
                     # this connector has lived for too long,
                     # we want to unbind it and remove it from the pool
-                    conn.unbind_s()
+                    try:
+                        conn.unbind_s()
+                    except Exception:
+                        pass  # XXX we will see later
+
                     self._pool.remove(conn)
                     continue
 
