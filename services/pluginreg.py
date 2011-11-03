@@ -118,7 +118,7 @@ def load_and_configure(config, section=None, cls_param='backend'):
     if backend is None:
         raise KeyError('No plugin registered for "%s"' % backend_name)
 
-    del params['backend']
+    del params[cls_param]
 
     # now returning an instance
     return backend(**params)
