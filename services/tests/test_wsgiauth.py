@@ -75,8 +75,8 @@ class BadPasswordUserTool(MemoryUser):
     For successful auth, the user id is always 1.
     """
 
-    def authenticate_user(self, user, password, *args):
-        for value in (user["username"], password):
+    def authenticate_user(self, user, credentials, *args):
+        for value in (user["username"], credentials["password"]):
             if "b" in value and "a" in value and "d" in value:
                 return None
         return 1

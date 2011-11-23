@@ -20,6 +20,7 @@
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
 #   Toby Elliott (telliott@mozilla.com)
+#   Ryan Kelly (rkelly@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,8 +38,9 @@
 """ Base interface for user functions such as auth and account admin
 """
 import abc
-import binascii
 import base64
+import functools
+import warnings
 from hashlib import sha1
 
 from services.pluginreg import PluginRegistry
@@ -59,38 +61,25 @@ def extract_username(username):
     return base64.b32encode(hashed).lower()
 
 
-def get_basic_auth(request):
-    """
-    Takes a request object and extracts a username and password out of
-    the basic-auth header
-    """
-    auth = request.environ.get('HTTP_AUTHORIZATION')
-    if auth is None or not auth.startswith('Basic '):
-        return (False, False)
-
-    auth = auth[len('Basic '):].strip()
-    try:
-        # Split in such a way as to preserve
-        # passwords that contain ':'.
-        user_name, password = base64.decodestring(auth).split(':', 1)
-    except (binascii.Error, ValueError):
-        raise ValueError()
-    password = password.decode('utf8')
-    return (extract_username(user_name), password)
-
-
 class User(dict):
     """
     A holding class for user data. One day it might be more, so better
     to put a class wrapper around it
     """
+
     def __init__(self, username=None, userid=None):
-            self['username'] = username
-            self['userid'] = userid
+        self['username'] = username
+        self['userid'] = userid
 
 
 class ServicesUser(PluginRegistry):
-    """Abstract Base Class for the authentication APIs."""
+    """Abstract Base Class for the authentication APIs.
+
+    All user authentication is done by passing in a "credentials" dict.
+    All backends must support credentials consisting of "username" and
+    "password" keys.  They may also support other schemes such as digest
+    access authentication or BrowserID.
+    """
 
     @abc.abstractmethod
     def get_user_id(self, user):
@@ -104,11 +93,11 @@ class ServicesUser(PluginRegistry):
         """
 
     @abc.abstractmethod
-    def create_user(self, user_name, password, email):
+    def create_user(self, username, password, email):
         """Creates a user
 
         Args:
-            - user_name: the user name
+            - username: the username associated with the user
             - password: the password associated with the user
             - email: the email associated with the user
 
@@ -117,17 +106,20 @@ class ServicesUser(PluginRegistry):
         """
 
     @abc.abstractmethod
-    def authenticate_user(self, user, password, attrs=None):
+    def authenticate_user(self, user, credentials, attrs=None):
         """Authenticates a user.
 
         Args:
-            user: a user object
-            password: password
+            user: a user object.  Will be updated as a side-effect
+            credentials: a dict containing the user's auth credentials
             attrs: a list of other attributes desired
 
         Returns:
-            The user id in case of success. None otherwise. Updates the user
-            object with requested attributes if they aren't already defined
+            None in case of failure.  The user id in case of success.
+
+        Side Effects:
+            Updates the user object with requested attributes if they
+            aren't already defined.
         """
 
     @abc.abstractmethod
@@ -143,12 +135,12 @@ class ServicesUser(PluginRegistry):
         """
 
     @abc.abstractmethod
-    def update_field(self, user, password, key, value):
+    def update_field(self, user, credentials, key, value):
         """Change the value of a field in the user record
 
         Args:
             user: user object
-            password: the user's password
+            credentials: a dict containing authentication credentials
             key: name of the field.
             value: value to put in the field
 
@@ -174,14 +166,14 @@ class ServicesUser(PluginRegistry):
         """
 
     @abc.abstractmethod
-    def update_password(self, user, old_password, new_password):
+    def update_password(self, user, credentials, new_password):
         """
         Change the user password.
 
         Args:
             user: user object
-            new_password: new password
-            old_password: old password of the user
+            credentials: a dict containing authentication credentials
+            new_password: new password for the user
 
         Returns:
             True if the change was successful, False otherwise
@@ -203,15 +195,36 @@ class ServicesUser(PluginRegistry):
         """
 
     @abc.abstractmethod
-    def delete_user(self, user, password=None):
+    def delete_user(self, user, credentials=None):
         """
         Deletes a user.
 
         Args:
             user: the user object
-            password: the user password, if one needs to be proxied
-            to a backend
+            credentials: a dict containing authentication credentials, if
+                         they need to be proxied to a backend
 
         Returns:
             True if the deletion was successful, False otherwise
         """
+
+
+def _password_to_credentials(func):
+    """Decorator to turn a raw password into a credentials dict.
+
+    This is a backwards-compatability hook to deal with code that passes
+    a raw password into the User backend instead of a credentials dict.
+    It transforms the password into a username/password dict before passing
+    it on to the wrapped method.
+    """
+    @functools.wraps(func)
+    def wrapped_method(self, user, credentials=None, *args, **kwds):
+        if isinstance(credentials, basestring):
+            msg = "Method %s.%s should be passed a dict of credentials, "\
+                  "not a raw password"
+            msg = msg % (self.__class__.__name__, func.__name__,)
+            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+            username = user.get("username")
+            credentials = {"username": username, "password": credentials}
+        return func(self, user, credentials, *args, **kwds)
+    return wrapped_method

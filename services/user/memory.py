@@ -37,13 +37,14 @@
 """ Dummy Authentication
 """
 import random
-from services.user import User
+from services.user import User, _password_to_credentials
 
 
 class MemoryUser(object):
     """Dummy authentication.
 
-    Will store the user ids in memory"""
+    Will store the user ids in memory.
+    """
 
     def __init__(self, **kw):
         self._users = {}
@@ -82,20 +83,27 @@ class MemoryUser(object):
         user['mail'] = email
         return user
 
-    def authenticate_user(self, user, password, attrs=None):
-        """Authenticates a user given a username and password.
+    @_password_to_credentials
+    def authenticate_user(self, user, credentials, attrs=None):
+        """Authenticates a user given a username and auth credentials.
 
-        Returns the user id in case of success. Returns None otherwise."""
+        Returns the user id in case of success, None in case of failure.
+        """
 
-        user_name = user.get("username")
-        if user_name not in self._users:
+        username = credentials.get("username")
+        if username is None:
+            return None
+        if username not in self._users:
+            return None
+        if user.get("username") not in (None, username):
             return None
 
-        data = self._users[user_name]
+        data = self._users[username]
 
-        if data['password'] != password:
+        if data['password'] != credentials.get('password'):
             return None
 
+        user['username'] = username
         user['userid'] = data['userid']
         if attrs is not None:
             for attr in attrs:
@@ -113,10 +121,11 @@ class MemoryUser(object):
             user[attr] = data.get(attr)
         return user
 
-    def update_field(self, user, password, key, value):
+    @_password_to_credentials
+    def update_field(self, user, credentials, key, value):
         """Updates the value for a user field"""
 
-        if not self.authenticate_user(user, password):
+        if not self.authenticate_user(user, credentials):
             return False
         user_name = user.get("username")
         if user_name not in self._users:
@@ -139,18 +148,25 @@ class MemoryUser(object):
 
         return True
 
-    def update_password(self, user, old_password, new_password):
+    @_password_to_credentials
+    def update_password(self, user, credentials, new_password):
         """Updates the password"""
-        if not self.authenticate_user(user, old_password):
+        if not self.authenticate_user(user, credentials):
             return False
-        return self.update_field(user, old_password, 'password', new_password)
+        return self.update_field(user, credentials, 'password', new_password)
 
     def admin_update_password(self, user, new_password):
         """Updates the password"""
         return self.admin_update_field(user, 'password', new_password)
 
-    def delete_user(self, user, password=None):
+    @_password_to_credentials
+    def delete_user(self, user, credentials=None):
         """Removes a user"""
+
+        if credentials is not None:
+            if not self.authenticate_user(user, credentials):
+                return False
+
         user_name = user.get("username")
         if user_name in self._users:
             del self._users[user_name]

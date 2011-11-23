@@ -162,12 +162,17 @@ class Authentication(object):
                 request.user = User(user_name, user_id)
             else:
                 user = User(user_name)
-                user_id = self.backend.authenticate_user(user, password,
+                credentials = {"username": user_name, "password": password}
+                user_id = self.backend.authenticate_user(user, credentials,
                                                          ['syncNode'])
-                if (self.config.get('auth.check_node')
-                    and user.get('syncNode') != environ.get('HTTP_HOST')):
+                if not user_id:
                     user_id = None
                     user = None
+                else:
+                    if (self.config.get('auth.check_node')
+                        and user.get('syncNode') != environ.get('HTTP_HOST')):
+                        user_id = None
+                        user = None
 
                 request.user = user
 

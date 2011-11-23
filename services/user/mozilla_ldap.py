@@ -42,7 +42,7 @@ import random
 import ldap
 
 from services import logger
-from services.user import User
+from services.user import User, _password_to_credentials
 from services.util import BackendError, ssha
 from services.ldappool import ConnectionManager
 
@@ -128,16 +128,23 @@ class LDAPUser(object):
         else:
             return False
 
-    def authenticate_user(self, user, password, attrs=None):
-        """Authenticates a user given a user_name and password.
+    @_password_to_credentials
+    def authenticate_user(self, user, credentials, attrs=None):
+        """Authenticates a user given a user_name and credentials.
 
-        Returns the user id in case of success. Returns None otherwise."""
+        Returns the user id in case of success. Returns None otherwise.
+        """
 
-        if password is None or password == '':
+        username = credentials.get("username")
+        if username is None:
+            return None
+        if user.get("username") is None:
+            user["username"] = username
+        elif user.get("username") != username:
             return None
 
-        if not user.get('username'):
-            #cannot authenticate without a username
+        password = credentials.get("password")
+        if not password:
             return None
 
         dn = self._get_dn(user)
@@ -210,12 +217,22 @@ class LDAPUser(object):
             user[attr] = res.get(attr, [None])[0]
         return user
 
-    def update_field(self, user, password, key, value):
+    @_password_to_credentials
+    def update_field(self, user, credentials, key, value):
         """Change the value of a user's field
         True if the change was successful, False otherwise
         """
+
+        if not credentials:
+            return None
+        password = credentials.get("password")
+        if not password:
+            return None
+
         dn = self._get_dn(user)
-        return self._modify_record(user, key, value, dn, password)
+        if not self._modify_record(user, key, value, dn, password):
+            return False
+        return True
 
     def admin_update_field(self, user, key, value):
         """Change the value of a user's field using an admin bind
@@ -223,22 +240,31 @@ class LDAPUser(object):
         """
         return self._modify_record(user, key, value)
 
-    def update_password(self, user, old_password, new_password):
+    @_password_to_credentials
+    def update_password(self, user, credentials, new_password):
         """
         Change the user password. Uses the user bind.
 
         Args:
             user: user object
-            new_password: new password
-            old_password: old password of the user
+            credentials: a dict with the user's auth credentials
+            new_password: new password of the user
 
         Returns:
             True if the change was successful, False otherwise
         """
+        if not credentials:
+            return False
+        old_password = credentials.get("password")
+        if not old_password:
+            return False
+
         dn = self._get_dn(user)
         password_hash = ssha(new_password.encode('utf8'))
-        return self._modify_record(user, 'userPassword', password_hash,
-                                   dn, old_password)
+        if not self._modify_record(user, 'userPassword', password_hash,
+                                   dn, old_password):
+            return False
+        return True
 
     def admin_update_password(self, user, new_password, code=None):
         """
@@ -255,7 +281,8 @@ class LDAPUser(object):
         password_hash = ssha(new_password.encode('utf8'))
         return self._modify_record(user, 'userPassword', password_hash)
 
-    def delete_user(self, user, password=None):
+    @_password_to_credentials
+    def delete_user(self, user, credentials=None):
         """
         Deletes a user.
 
@@ -265,6 +292,11 @@ class LDAPUser(object):
         Returns:
             True if the deletion was successful, False otherwise
         """
+
+        if credentials is not None:
+            if not self.authenticate_user(user, credentials):
+                return False
+
         dn = self._get_dn(user)
         if dn is None:
             return True

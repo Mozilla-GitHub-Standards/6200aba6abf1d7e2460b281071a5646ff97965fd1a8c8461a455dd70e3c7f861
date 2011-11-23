@@ -42,7 +42,7 @@ import urlparse
 from services import logger
 from services.http_helpers import get_url
 from services.user.mozilla_ldap import LDAPUser
-from services.user import User
+from services.user import User, _password_to_credentials
 from services.resetcodes import InvalidCodeError
 from services.respcodes import ERROR_INVALID_WRITE, ERROR_INVALID_RESET_CODE
 from services.exceptions import BackendError
@@ -113,16 +113,20 @@ class SregUser(LDAPUser):
         msg += 'Received status: %d' % status
         raise BackendError(msg, server=url)
 
-    def delete_user(self, user, password=None):
+    @_password_to_credentials
+    def delete_user(self, user, credentials=None):
         """Deletes the user
 
         Args:
             user_id: user id
-            password: user password
+            credentials: user authentication credentials
 
         Returns:
             True if the change was successful, False otherwise
         """
+        if credentials is None:
+            return False
+        password = credentials.get("password")
         if password is None:
             return False
 

@@ -47,7 +47,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 
 from services.util import (validate_password, ssha256, safe_execute)
-from services.user import User
+from services.user import User, _password_to_credentials
 
 _Base = declarative_base()
 tables = []
@@ -149,13 +149,22 @@ class SQLUser(object):
 
         return userobj
 
-    def authenticate_user(self, user, password, attrs=None):
-        """Authenticates a user given a user object and password.
+    @_password_to_credentials
+    def authenticate_user(self, user, credentials, attrs=None):
+        """Authenticates a user given a user object and credentials.
 
-        Returns the user id in case of success. Returns None otherwise."""
-        username = user.get('username')
+        Returns the user id in case of success. Returns None otherwise.
+        """
+
+        username = credentials.get("username")
         if username is None:
-            return False
+            return None
+        if user.get("username") not in (None, username):
+            return None
+
+        password = credentials.get("password")
+        if password is None:
+            return None
 
         fields = [users.c.userid, users.c.password, users.c.accountStatus]
         if attrs is not None:
@@ -171,14 +180,16 @@ class SQLUser(object):
             return None
 
         if self.check_account_state and res.accountStatus != 1:
-            # user is disabled
             return None
 
-        if validate_password(password, res.password):
-            user['userid'] = res.userid
-            for attr in attrs:
-                user[attr] = getattr(res, attr)
-            return res.userid
+        if not validate_password(password, res.password):
+            return None
+
+        user['username'] = username
+        user['userid'] = res.userid
+        for attr in attrs:
+            user[attr] = getattr(res, attr)
+        return res.userid
 
     def get_user_info(self, user, attrs):
         """Returns user info
@@ -215,11 +226,12 @@ class SQLUser(object):
 
         return user
 
-    def update_field(self, user, password, key, value):
+    @_password_to_credentials
+    def update_field(self, user, credentials, key, value):
         """Change the value of a user's field
         True if the change was successful, False otherwise
         """
-        if not self.authenticate_user(user, password):
+        if not self.authenticate_user(user, credentials):
             return False
 
         #we don't have the concept of differently permissioned users here
@@ -240,19 +252,20 @@ class SQLUser(object):
         user[key] = value
         return res.rowcount == 1
 
-    def update_password(self, user, old_password, new_password):
+    @_password_to_credentials
+    def update_password(self, user, credentials, new_password):
         """
         Change the user password. Uses the user bind.
 
         Args:
             user: user object
-            new_password: new password
+            credentials: a dict containing the user's auth credentials
             old_password: old password of the user
 
         Returns:
             True if the change was successful, False otherwise
         """
-        if not self.authenticate_user(user, old_password):
+        if not self.authenticate_user(user, credentials):
             return False
 
         #we don't have the concept of differently permissioned users here
@@ -271,7 +284,8 @@ class SQLUser(object):
         password_hash = ssha256(new_password.encode('utf8'))
         return self.admin_update_field(user, 'password', password_hash)
 
-    def delete_user(self, user, password=None):
+    @_password_to_credentials
+    def delete_user(self, user, credentials=None):
         """
         Deletes a user. Needs to be done with admin privileges, since
         users don't have permission to do it themselves.
@@ -282,6 +296,11 @@ class SQLUser(object):
         Returns:
             True if the deletion was successful, False otherwise
         """
+
+        if credentials is not None:
+            if not self.authenticate_user(user, credentials):
+                return False
+
         user_id = self.get_user_id(user)
         if user_id is None:
             return False
