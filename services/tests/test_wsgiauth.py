@@ -240,7 +240,7 @@ class HTTPBasicAuthAPITestCases(AuthAPITestCases):
 
     def test_malformed_auth_headers(self):
         config = self.make_config()
-        auth = Authentication(config)
+        auth = self.auth_class(config)
 
         req = make_request('/1.0/tarekbad',
                             {'HTTP_AUTHORIZATION': 'Basic ',
