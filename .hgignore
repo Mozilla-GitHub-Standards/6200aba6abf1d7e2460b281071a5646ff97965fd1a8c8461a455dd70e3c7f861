@@ -4,6 +4,7 @@ lib
 include
 bin
 man
+build
 .channel
 Services.egg-info
 swp$

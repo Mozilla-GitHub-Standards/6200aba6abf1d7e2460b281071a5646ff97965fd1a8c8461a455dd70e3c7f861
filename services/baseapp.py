@@ -59,6 +59,7 @@ from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
 from services.pluginreg import load_and_configure
 from services.user import User
+from services.metrics import rebind_dispatcher
 
 
 class SyncServerApp(object):
@@ -89,8 +90,21 @@ class SyncServerApp(object):
         self.sigclean = self.config.get('global.clean_shutdown', True)
 
         self.modules = dict()
-        for module in self.config.get('app.modules', []):
+
+        app_modules = self.config.get('app.modules', [])
+        if isinstance(app_modules, basestring):
+            app_modules = [app_modules]
+
+        for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
+
+        metlog_client = self.modules.get('metlog_client')
+        metlog_sender = self.modules.get('metlog_sender')
+        metlog_helper = self.modules.get('metlog_helper')
+
+        if (metlog_client and metlog_sender and metlog_helper):
+            metlog_client.sender = metlog_sender
+            metlog_helper.set_client(metlog_client)
 
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
@@ -99,6 +113,12 @@ class SyncServerApp(object):
         # loading and connecting controllers
         self.controllers = dict([(name, klass(self)) for name, klass in
                                  controllers.items()])
+
+        # Setup a default metrics logger
+        if metlog_client:
+            self.metlog = metlog_client
+        else:
+            self.metlog = None
 
         for url in urls:
             if len(url) == 4:
@@ -278,9 +298,19 @@ class SyncServerApp(object):
                 self.auth.acknowledge(request, response)
                 return response
 
+    def _metlog_dispatch_request_with_match(self, request, match):
+        function = self._get_function(match['controller'], match['action'])
+        method_name = "%s.%s" % (function.__module__, function.func_name)
+        with self.metlog.timer(method_name):
+            return self.__dispatch_request_with_match(function, request, match)
+
+    @rebind_dispatcher('_metlog_dispatch_request_with_match')
     def _dispatch_request_with_match(self, request, match):
         """Dispatch a request according to a URL routing match."""
         function = self._get_function(match['controller'], match['action'])
+        return self.__dispatch_request_with_match(function, request, match)
+
+    def __dispatch_request_with_match(self, function, request, match):
         if function is None:
             raise HTTPNotFound('Unknown URL %r' % request.path_info)
 
