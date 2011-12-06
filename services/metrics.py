@@ -44,6 +44,7 @@ from services.null import NullObject
 import sys
 import functools
 import exceptions
+from metlog.client import SEVERITY
 
 
 def metlogger(config, klass):
@@ -206,7 +207,7 @@ def wrap_method(fn, timer_kwargs):
         frame = sys._getframe(1)
         frame_info = getFrameInfo(frame)
         module = frame_info[1]
-        if getattr(module, klass.__name__, None) <> klass:
+        if getattr(module, klass.__name__, None) != klass:
             raise NotImplementedError("Unsupported timing method")
 
         if not HELPER._client:
@@ -324,3 +325,39 @@ def getFrameInfo(frame):
         # This is probably module-level code, but with a '__module__' variable.
         kind = "unknown"
     return kind, module, f_locals, f_globals
+
+
+class ClassicLogger(object):
+
+    def metlog_log(self, msg, level):
+        '''
+        If metlog is enabled, we're going to send messages here
+        '''
+        # TODO send messages here
+        pass
+
+    @rebind_dispatcher('metlog_log')
+    def _log(self, msg, level):
+        '''
+        This is a no-op method in case metlog is disabled
+        '''
+
+    def debug(self, msg):
+        self._log(msg, SEVERITY.DEBUG)
+
+    def info(self, msg):
+        self._log(msg, SEVERITY.INFORMATIONAL)
+
+    def warn(self, msg):
+        self._log(msg, SEVERITY.WARNING)
+
+    def error(self, msg):
+        self._log(msg, SEVERITY.ERROR)
+
+    def exception(self, msg):
+        self._log(msg, SEVERITY.ALERT)
+
+    def critical(self, msg):
+        self._log(msg, SEVERITY.CRITICAL)
+
+logger = ClassicLogger()

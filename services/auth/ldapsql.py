@@ -50,7 +50,7 @@ from services.util import BackendError, ssha
 from services.auth import NodeAttributionError
 from services.ldappool import ConnectionManager, StateConnector
 from services.auth.resetcode import ResetCodeManager
-from services import logger
+from services.metrics import logger
 
 #
 # Custom SQL tables:

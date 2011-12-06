@@ -47,7 +47,6 @@ import itertools
 import re
 import datetime
 import os
-import logging
 import urllib2
 from decimal import Decimal, InvalidOperation
 import time
@@ -58,9 +57,9 @@ from webob import Response
 
 from sqlalchemy.exc import OperationalError, TimeoutError
 
-from services import logger
 from services.exceptions import BackendError, BackendTimeoutError  # NOQA
 
+from services.metrics import logger
 
 random.seed()
 _RE_CODE = re.compile('[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}')
@@ -295,7 +294,7 @@ class CatchErrorMiddleware(object):
     def __init__(self, app, logger_name='root', hook=None,
                  type='application/json'):
         self.app = app
-        self.logger = logging.getLogger(logger_name)
+        self.logger = logger
         self.hook = hook
         self.ctype = type
 
