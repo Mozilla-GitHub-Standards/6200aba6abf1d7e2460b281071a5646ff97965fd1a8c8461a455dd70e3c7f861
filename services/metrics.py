@@ -47,49 +47,6 @@ import exceptions
 from metlog.client import SEVERITY
 
 
-def metlogger(config, klass):
-    """
-    Create a configured MetlogClient instance.
-
-    Pass in the class so that the default logger_name can use the
-    class name
-    """
-    # Just grab the caller location
-    logger_name = "%s|%s" % (klass.__module__, klass.__name__)
-
-    # Obtain the fully qualified classname of the sender class
-    if config.get_section('metlog').get('disabled', True):
-        return NullObject()
-
-    fq_sender = config['metlog.sender']
-    module_name = '.'.join(fq_sender.split('.')[:-1])
-    cls_name = fq_sender.split('.')[-1]
-
-    sender_module = __import__(module_name)
-    for segment in module_name.split(".")[1:]:
-        sender_module = getattr(sender_module, segment)
-    klass = getattr(sender_module, cls_name)
-
-    # Ok, now grab the arguments and instantiate
-    config_prefix = 'metlog_%s.' % cls_name
-    config_keys = [key for key in config.keys() \
-            if key.startswith(config_prefix)]
-
-    # Splice the ending off so that we can get named argument passing
-    # working
-    kwargs = {}
-    for k in config_keys:
-        argname = k.split(".")[-1]
-        # Lists in the config file are always pipe delimited
-        kwargs[argname] = config[k].split("|")
-
-    sender = klass(**kwargs)
-    client = MetlogClient(sender, logger_name)
-    client._config = config
-
-    return client
-
-
 class MetlogHelper(object):
     """
     This is class acts as a kind of lazy proxy to the MetlogClient.
