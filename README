@@ -11,3 +11,45 @@ Core library that provides these features:
 - Authentication back ends for Sync
 - Event registry
 
+
+Metrics and Logging
+-------------------
+
+Metrics are configured in your sync application's sync.conf file.
+
+You will need to add a section [metlog_helper] that looks something
+like this ::
+
+    [metlog_helper]
+    enabled=true
+
+    backend=services.metrics.MetlogHelperPlugin
+
+    sender_backend=metlog.senders.ZmqPubSender
+    sender_bindstrs=tcp://localhost:5585
+                    tcp://localhost:5586
+
+By default, metrics and logging are disabled.  You must explicitly
+have the enabled flag set to true or the component will be disabled.
+
+The metrics helper must define a set of keys prefixed with "sender_".
+The most important one of these is the "sender_backend" which defines
+the classname of the metlog sender backend. All other 'sender_' prefixed keys will be
+passed into the constructor of the sender with the prefix stripped
+away.
+
+Metrics provides several ways of accessing the logging system.
+
+1) A ClassicLogger which provides a logger-like object for easy porting of legacy code
+2) baseapp.metlog to directly access the global metlog instance
+3) A @timeit decorator to get timing metrics on module level functions and instance methods.
+
+Most common cases will probably only use the baseapp.metlog instance
+or the timeit decorator. Please refer to the metlog library itself for
+documentation on how to use the metlog instance: https://github.com/mozilla-services/metlog
+
+The timeit decorator will access the global metlog instance and will
+give you the total execution time for module level functions and
+instance methods of objects.  If metrics are disabled, the @timeit
+decorator will leave functions unmodified.
+
