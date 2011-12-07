@@ -139,9 +139,27 @@ class MetlogHelper(object):
 HELPER = MetlogHelper()
 
 
-def MetlogHelperPlugin():
+def MetlogHelperPlugin(**kwargs):
     # this shim is required to provide access to the services.plugin
     # system
+
+    # Disable metrics by default
+    if not kwargs.get('enabled', False):
+        return NullObject()
+    del kwargs['enabled']
+
+    from services.pluginreg import _resolve_name
+
+    HELPER._client = MetlogClient(None)
+
+    # Strip out the keys prefixed with 'sender_'
+    sender_keys = dict([(k.replace("sender_", ''), w) \
+                    for (k, w) in kwargs.items() \
+                    if k.startswith('sender_')])
+
+    klass = _resolve_name(sender_keys['backend'])
+    del sender_keys['backend']
+    HELPER._client.sender = klass(**sender_keys)
     return HELPER
 
 

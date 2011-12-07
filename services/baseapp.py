@@ -98,14 +98,6 @@ class SyncServerApp(object):
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
-        metlog_client = self.modules.get('metlog_client')
-        metlog_sender = self.modules.get('metlog_sender')
-        metlog_helper = self.modules.get('metlog_helper')
-
-        if (metlog_client and metlog_sender and metlog_helper):
-            metlog_client.sender = metlog_sender
-            metlog_helper.set_client(metlog_client)
-
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
         self.auth = None if auth_class is None else auth_class(self.config)
@@ -115,7 +107,8 @@ class SyncServerApp(object):
                                  controllers.items()])
 
         # Setup a default metrics logger
-        self.metlog = metlog_client
+        if self.modules.get('metlog_helper'):
+            self.metlog = self.modules.get('metlog_helper')._client
 
         for url in urls:
             if len(url) == 4:

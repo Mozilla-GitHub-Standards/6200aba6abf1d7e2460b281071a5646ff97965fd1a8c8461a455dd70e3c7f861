@@ -39,6 +39,7 @@ from services.metrics import HELPER
 from services.metrics import MetlogClient
 from services.metrics import rebind_dispatcher
 from services.metrics import logger
+from services.metrics import MetlogHelperPlugin
 from mock import Mock
 from metlog.client import SEVERITY
 
@@ -314,23 +315,26 @@ class TestInvalidDecoration(unittest.TestCase):
         except NotImplementedError, e:
             assert e.message == 'Unsupported timing method'
 
+
 class RebindTarget(object):
 
     @rebind_dispatcher('rebinder')
     def some_method(self):
         return 42
-    
+
     def rebinder(self):
         return 24
+
 
 class NoRebindTarget(object):
 
     @rebind_dispatcher('rebinder')
     def some_method(self):
         return 42
-    
+
     def rebinder(self):
         return 24
+
 
 class TestRebindDispatch(unittest.TestCase):
 
@@ -339,7 +343,6 @@ class TestRebindDispatch(unittest.TestCase):
         obj = RebindTarget()
         value = obj.some_method()
         assert value == 24
-
 
     def test_no_rebind(self):
         HELPER.set_client(None)
@@ -356,7 +359,7 @@ class TestClassicLogger(unittest.TestCase):
         (SEVERITY.WARNING, 'warn', logger.warn),
         (SEVERITY.ERROR, 'error', logger.error),
         (SEVERITY.ALERT, 'exception', logger.exception),
-        (SEVERITY.CRITICAL, 'critical', logger.critical),]
+        (SEVERITY.CRITICAL, 'critical', logger.critical)]
 
         for lvl, msg, method in msgs:
 
@@ -374,3 +377,20 @@ class TestClassicLogger(unittest.TestCase):
             assert timer_call[1][0]['payload'] == 'some %s' % msg
             assert timer_call[1][0]['severity'] == lvl
 
+
+helper_config = {
+    'enabled': True,
+    'backend': 'services.metrics.MetlogHelperPlugin',
+    'sender_backend': 'metlog.senders.ZmqPubSender',
+    'sender_bindstrs': ['tcp://localhost:5585', 'tcp://localhost:5586'],
+}
+
+
+class TestHelperPlugin(unittest.TestCase):
+    def test_create_plugin(self):
+        helper = MetlogHelperPlugin(**helper_config)
+        assert helper._client != None
+        sender = helper._client.sender
+
+        assert sender.__class__.__name__ == 'ZmqPubSender'
+        assert sender.bindstrs == helper_config['sender_bindstrs']
