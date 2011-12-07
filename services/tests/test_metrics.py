@@ -38,7 +38,9 @@ from services.metrics import timeit
 from services.metrics import HELPER
 from services.metrics import MetlogClient
 from services.metrics import rebind_dispatcher
+from services.metrics import logger
 from mock import Mock
+from metlog.client import SEVERITY
 
 
 @timeit
@@ -346,5 +348,29 @@ class TestRebindDispatch(unittest.TestCase):
         assert value == 42
 
 
+class TestClassicLogger(unittest.TestCase):
 
+    def test_oldstyle_logger(self):
+        msgs = [(SEVERITY.DEBUG, 'debug', logger.debug),
+        (SEVERITY.INFORMATIONAL, 'info', logger.info),
+        (SEVERITY.WARNING, 'warn', logger.warn),
+        (SEVERITY.ERROR, 'error', logger.error),
+        (SEVERITY.ALERT, 'exception', logger.exception),
+        (SEVERITY.CRITICAL, 'critical', logger.critical),]
+
+        for lvl, msg, method in msgs:
+
+            HELPER.set_client(None)
+            self._sender = Mock()
+            self._client = MetlogClient(sender=self._sender)
+            HELPER.set_client(self._client)
+
+            method("some %s" % msg)
+
+            assert len(self._sender.method_calls) == 1
+            timer_call = self._sender.method_calls[0]
+            assert timer_call[1][0]['logger'] == 'anonymous'
+            assert timer_call[1][0]['type'] == 'oldstyle'
+            assert timer_call[1][0]['payload'] == 'some %s' % msg
+            assert timer_call[1][0]['severity'] == lvl
 
