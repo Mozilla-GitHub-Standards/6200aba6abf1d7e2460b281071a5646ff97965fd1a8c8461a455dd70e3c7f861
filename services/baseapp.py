@@ -107,7 +107,7 @@ class SyncServerApp(object):
                                  controllers.items()])
 
         # Setup a default metrics logger
-        if self.modules.get('metlog_helper'):
+        if self.modules.get('metlog_helper') != None:
             self.metlog = self.modules.get('metlog_helper')._client
 
         for url in urls:
