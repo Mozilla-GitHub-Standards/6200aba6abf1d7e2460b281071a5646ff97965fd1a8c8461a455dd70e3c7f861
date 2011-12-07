@@ -105,7 +105,7 @@ class MetlogHelper(object):
         self._registry = {}
         self._web_dispatcher = None
 
-    def _resolve_fq_name(self, func, klass=None):
+    def _return_fq_name(self, func, klass=None):
         """
         Resolve a fully qualified name for a function
         """
@@ -132,7 +132,7 @@ class MetlogHelper(object):
     def decorate(self, fn, kwargs, fq_name=None):
         """ Decorate a function with a metlog timer """
         if fq_name is None:
-            fq_name = self._resolve_fq_name(fn)
+            fq_name = self._return_fq_name(fn)
         wrapped_fn = self._client.timer(fq_name, **kwargs)(fn)
         return wrapped_fn
 
@@ -214,7 +214,7 @@ def wrap_method(fn, timer_kwargs):
             setattr(klass, fn.__name__, fn)
             return fn(*args, **kwargs)
 
-        fq_name = HELPER._resolve_fq_name(fn, klass)
+        fq_name = HELPER._return_fq_name(fn, klass)
 
         timed_func = HELPER.decorate(fn, timer_kwargs, fq_name)
         timed_func._decorated = True
@@ -329,12 +329,17 @@ def getFrameInfo(frame):
 
 class ClassicLogger(object):
 
+    def __init__(self, logger_name=None):
+        if not logger_name:
+            logger_name = 'anonymous'
+        self._logger_name = logger_name
+
     def metlog_log(self, msg, level):
         '''
         If metlog is enabled, we're going to send messages here
         '''
-        # TODO send messages here
-        pass
+        HELPER._client.metlog(type='oldstyle', logger=self._logger_name, severity=level,
+                   payload=msg)
 
     @rebind_dispatcher('metlog_log')
     def _log(self, msg, level):

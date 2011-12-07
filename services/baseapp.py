@@ -115,10 +115,7 @@ class SyncServerApp(object):
                                  controllers.items()])
 
         # Setup a default metrics logger
-        if metlog_client:
-            self.metlog = metlog_client
-        else:
-            self.metlog = None
+        self.metlog = metlog_client
 
         for url in urls:
             if len(url) == 4:
