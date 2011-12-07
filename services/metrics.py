@@ -109,11 +109,11 @@ class MetlogHelper(object):
         """
         Resolve a fully qualified name for a function
         """
-        try:
+        if klass != None:
             name = "%s:%s.%s" % (klass.__module__, \
                                  klass.__name__, \
                                  func.func_name)
-        except:
+        else:
             name = "%s.%s" % (func.__module__, func.func_name)
         return name
 
@@ -338,8 +338,9 @@ class ClassicLogger(object):
         '''
         If metlog is enabled, we're going to send messages here
         '''
-        HELPER._client.metlog(type='oldstyle', logger=self._logger_name, severity=level,
-                   payload=msg)
+        HELPER._client.metlog(type='oldstyle',
+                logger=self._logger_name,
+                severity=level, payload=msg)
 
     @rebind_dispatcher('metlog_log')
     def _log(self, msg, level):
