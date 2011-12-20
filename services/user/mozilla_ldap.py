@@ -77,7 +77,10 @@ class LDAPUser(object):
 
     def create_user(self, user_name, password, email):
         """Creates a user. Returns a user object on success."""
-        user_name = str(user_name)   # XXX only ASCII
+        # no unicode
+        user_name = user_name.encode('utf8')
+        password = password.encode('utf8')
+        email = email.encode('utf8')
 
         #First make sure the username isn't taken. There'll still be a race
         #condition, but it's pretty small
