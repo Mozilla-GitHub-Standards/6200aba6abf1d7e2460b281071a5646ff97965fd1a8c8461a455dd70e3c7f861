@@ -46,7 +46,7 @@ except:
     implements = lambda x: None
     IAuthenticator = None
 
-from cef import log_cef
+from cef import log_cef, AUTH_FAILURE
 
 from services.user import User, extract_username
 
@@ -91,11 +91,11 @@ class BackendAuthPlugin(object):
 
         # Log the error if that failed.
         if user is None:
-            err = 'Authentication Failed for Backend service ' + username
-            if orig_username is not None:
-                if username != orig_username:
-                    err += ' (%s)' % (orig_username,)
-            log_cef(err, 5, environ, self.config)
+            err_username = username
+            if username != orig_username:
+                err_username += ' (%s)' % (orig_username,)
+            log_cef('User Authentication Failed', 5, environ, self.config,
+                    err_username, AUTH_FAILURE)
             return None
 
         # Success!  Store any loaded attributes into the identity dict.

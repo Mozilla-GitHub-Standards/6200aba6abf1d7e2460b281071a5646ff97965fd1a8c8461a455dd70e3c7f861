@@ -39,7 +39,7 @@ Authentication class based on repoze.who
 """
 
 from webob.exc import HTTPUnauthorized
-from cef import log_cef
+from cef import log_cef, AUTH_FAILURE
 
 try:
     from repoze.who.api import APIFactory
@@ -135,14 +135,20 @@ class WhoAuthentication(object):
         if "REMOTE_USER" in request.environ:
             return
 
-        # Authenticate the user, and check against username in the match.
+        # Authenticate the user.
         api = self._api_factory(request.environ)
         identity = api.authenticate()
         if identity is None:
             self._raise_challenge(request)
-        if match.get("username") not in (None, identity.get("username")):
-            log_cef('Username Does Not Match URL', 7,
-                    request.environ, self.config)
+
+        # Check against the username matched from the url, if any.
+        username = identity.get("username")
+        if match.get("username") not in (None, username):
+            cef_kwds = {"signature": AUTH_FAILURE}
+            if username is not None:
+                cef_kwds["username"] = username
+            err = "Username Does Not Match URL"
+            log_cef(err, 7, request.environ, self.config, **cef_kwds)
             self._raise_challenge(request)
 
         # Adjust environ to record the successful auth.
