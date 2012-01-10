@@ -105,18 +105,21 @@ def MetlogHelperPlugin(**kwargs):
         return NullObject()
     del kwargs['enabled']
 
-    from services.pluginreg import _resolve_name
-
-    HELPER._client = MetlogClient(None)
+    logger = kwargs.pop('logger', 'server-core-app')
+    severity = kwargs.pop('severity', 6)
 
     # Strip out the keys prefixed with 'sender_'
     sender_keys = dict([(k.replace("sender_", ''), w) \
                     for (k, w) in kwargs.items() \
                     if k.startswith('sender_')])
 
+    from services.pluginreg import _resolve_name
     klass = _resolve_name(sender_keys['backend'])
     del sender_keys['backend']
-    HELPER._client.sender = klass(**sender_keys)
+
+    sender = klass(**sender_keys)
+    client = MetlogClient(sender, logger, severity)
+    HELPER.set_client(client)
     return HELPER
 
 
