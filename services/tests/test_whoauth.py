@@ -1,4 +1,4 @@
-# -*- encoding: utf8 -*-
+# -*- encoding: utf-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -39,43 +39,48 @@
 
 import unittest
 
-from services.whoauth import WhoAuthentication
+try:
+    from services.whoauth import APIFactory
+    from services.whoauth import WhoAuthentication
+    REPOZEWHO = True
+except ImportError:
+    REPOZEWHO = False
 from services.tests.test_wsgiauth import HTTPBasicAuthAPITestCases
 
 
-class TestWhoAuthentication(HTTPBasicAuthAPITestCases, unittest.TestCase):
-    """Tests for WhoAuthentication class in default configuration."""
-    auth_class = WhoAuthentication
+if REPOZEWHO:
 
+    class TestWhoAuthentication(HTTPBasicAuthAPITestCases, unittest.TestCase):
+        """Tests for WhoAuthentication class in default configuration."""
+        auth_class = WhoAuthentication
 
-class TestWhoAuthentication_NewStyleAuth(TestWhoAuthentication):
-    """Tests for WhoAuthentication class using new-style auth backend."""
-    BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
-    BASE_CONFIG["auth.backend"] = \
-                        'services.tests.test_wsgiauth.BadPasswordUserTool'
+    class TestWhoAuthentication_NewStyleAuth(TestWhoAuthentication):
+        """Tests for WhoAuthentication class using new-style auth backend."""
+        BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
+        BASE_CONFIG["auth.backend"] = \
+                            'services.tests.test_wsgiauth.BadPasswordUserTool'
 
+    WHO_CONFIG = {
+        "who.plugin.basic.use": "repoze.who.plugins.basicauth:make_plugin",
+        "who.plugin.basic.realm": "Sync",
+        "who.plugin.backend.use": "services.whoauth.backendauth:make_plugin",
+        "who.authenticators.plugins": "backend",
+        "who.identifiers.plugins": "basic",
+        "who.challengers.plugins": "basic",
+        }
 
-WHO_CONFIG = {
-  "who.plugin.basic.use": "repoze.who.plugins.basicauth:make_plugin",
-  "who.plugin.basic.realm": "Sync",
-  "who.plugin.backend.use": "services.whoauth.backendauth:make_plugin",
-  "who.authenticators.plugins": "backend",
-  "who.identifiers.plugins": "basic",
-  "who.challengers.plugins": "basic",
-}
-
-
-class TestWhoAuthentication_FromConfig(TestWhoAuthentication):
-    """Tests for WhoAuthentication class loaded from a config file"""
-    BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
-    BASE_CONFIG.update(WHO_CONFIG)
+    class TestWhoAuthentication_FromConfig(TestWhoAuthentication):
+        """Tests for WhoAuthentication class loaded from a config file"""
+        BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
+        BASE_CONFIG.update(WHO_CONFIG)
 
 
 def test_suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestWhoAuthentication))
-    suite.addTest(unittest.makeSuite(TestWhoAuthentication_NewStyleAuth))
-    suite.addTest(unittest.makeSuite(TestWhoAuthentication_FromConfig))
+    if REPOZEWHO:
+        suite.addTest(unittest.makeSuite(TestWhoAuthentication))
+        suite.addTest(unittest.makeSuite(TestWhoAuthentication_NewStyleAuth))
+        suite.addTest(unittest.makeSuite(TestWhoAuthentication_FromConfig))
     return suite
 
 

@@ -38,6 +38,8 @@
 import unittest
 import warnings
 
+from nose.plugins.skip import SkipTest
+
 from webob import Response
 from webob.exc import HTTPServiceUnavailable
 
@@ -212,7 +214,7 @@ class TestUser(unittest.TestCase):
         try:
             import sqlalchemy  # NOQA
         except ImportError:
-            return
+            raise SkipTest
 
         self._tests(load_and_configure(sql_config))
 
@@ -226,18 +228,18 @@ class TestUser(unittest.TestCase):
             mgr.authenticate_user(user1, credentials)
         except Exception:
             # we probably don't have an LDAP configured here. Don't test
-            return
+            raise SkipTest
 
         self._tests(mgr)
 
     def test_user_sreg(self):
         if not CAN_MOCK_WSGI:
-            return
+            raise SkipTest
         try:
             import ldap  # NOQA
         except ImportError:
             # we probably don't have an LDAP configured here. Don't test
-            return
+            raise SkipTest
 
         credentials = {"username": "user1", "password": "password1"}
 
@@ -286,7 +288,13 @@ class TestUser(unittest.TestCase):
         # this test makes sure all BackendErrors in user/sreg
         # give useful info in the TB
         if not CAN_MOCK_WSGI:
-            return
+            raise SkipTest
+
+        try:
+            import ldap  # NOQA
+        except ImportError:
+            # no ldap module means sreg_config won't load
+            raise SkipTest
 
         mgr = load_and_configure(sreg_config)
 
