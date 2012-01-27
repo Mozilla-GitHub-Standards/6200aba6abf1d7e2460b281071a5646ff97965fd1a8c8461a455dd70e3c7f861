@@ -38,10 +38,13 @@
 repoze.who IAuthenticator plugin that auths to services auth backend.
 """
 
-
-from zope.interface import implements
-
-from repoze.who.interfaces import IAuthenticator
+try:
+    from zope.interface import implements
+    from repoze.who.interfaces import IAuthenticator
+except:
+    # failing at import time is bad for test discovery
+    implements = lambda x: None
+    IAuthenticator = None
 
 from cef import log_cef
 

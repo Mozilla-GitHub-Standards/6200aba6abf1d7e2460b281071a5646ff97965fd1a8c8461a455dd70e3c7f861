@@ -41,8 +41,12 @@ Authentication class based on repoze.who
 from webob.exc import HTTPUnauthorized
 from cef import log_cef
 
-from repoze.who.api import APIFactory
-from repoze.who.config import WhoConfig
+try:
+    from repoze.who.api import APIFactory
+    from repoze.who.config import WhoConfig
+except ImportError:
+    # Failing at import time is bad for test importer
+    pass
 
 from services.pluginreg import load_and_configure
 
