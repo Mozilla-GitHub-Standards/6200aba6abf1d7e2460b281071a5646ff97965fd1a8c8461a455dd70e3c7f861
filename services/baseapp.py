@@ -293,6 +293,8 @@ class SyncServerApp(object):
             request.user = User()
             if 'username' in request.sync_info:
                 request.user['username'] = request.sync_info['username']
+            if 'user_id' in request.sync_info:
+                request.user['userid'] = request.sync_info['user_id']
 
         params = self._get_params(request)
         try:

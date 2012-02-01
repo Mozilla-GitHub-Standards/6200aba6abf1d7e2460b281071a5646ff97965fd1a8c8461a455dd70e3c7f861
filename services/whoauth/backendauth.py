@@ -43,8 +43,8 @@ try:
     from repoze.who.interfaces import IAuthenticator
 except:
     # failing at import time is bad for test discovery
-    implements = lambda x: None
-    IAuthenticator = None
+    implements = lambda x: None  # NOQA
+    IAuthenticator = None        # NOQA
 
 from cef import log_cef, AUTH_FAILURE
 

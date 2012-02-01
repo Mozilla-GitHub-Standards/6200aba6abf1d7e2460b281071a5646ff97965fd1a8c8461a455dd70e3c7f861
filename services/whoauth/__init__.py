@@ -49,6 +49,7 @@ except ImportError:
     pass
 
 from services.pluginreg import load_and_configure
+from services.user import User
 
 from services.whoauth.backendauth import BackendAuthPlugin
 
@@ -158,6 +159,8 @@ class WhoAuthentication(object):
         match["user_id"] = identity["userid"]
         request.remote_user = identity["username"]
         request.environ["REMOTE_USER"] = identity["username"]
+        request.user = User(identity["username"], identity["userid"])
+        request.user.update(identity)
 
     def acknowledge(self, request, response):
         """Acknowledges successful auth back to the user.

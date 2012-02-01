@@ -40,7 +40,6 @@
 import unittest
 
 try:
-    from services.whoauth import APIFactory
     from services.whoauth import WhoAuthentication
     REPOZEWHO = True
 except ImportError:

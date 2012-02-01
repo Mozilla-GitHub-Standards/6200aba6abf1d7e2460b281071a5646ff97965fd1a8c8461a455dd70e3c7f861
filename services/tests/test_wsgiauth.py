@@ -79,6 +79,7 @@ class BadPasswordUserTool(MemoryUser):
         for value in (user["username"], credentials["password"]):
             if "b" in value and "a" in value and "d" in value:
                 return None
+        user["userid"] = 1
         return 1
 
 
@@ -148,6 +149,8 @@ class AuthAPITestCases(object):
         req = make_request('/1.0/tarek/info/collections')
         self.set_credentials(req, "user", "goodpwd")
         auth.check(req, {"auth": "True"})
+        self.assertEquals(req.user["username"], "user")
+        self.assertEquals(req.user["userid"], 1)
 
         #  check() should fail auth if username doesn't match the match
         match = {"auth": "True", "username": "user1"}
