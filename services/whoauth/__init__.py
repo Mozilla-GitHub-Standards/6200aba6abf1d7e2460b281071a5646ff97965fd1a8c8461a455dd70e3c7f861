@@ -44,9 +44,10 @@ from cef import log_cef, AUTH_FAILURE
 try:
     from repoze.who.api import APIFactory
     from repoze.who.config import WhoConfig
+    HAVE_REPOZE_WHO = True
 except ImportError:
     # Failing at import time is bad for test importer
-    pass
+    HAVE_REPOZE_WHO = False
 
 from services.pluginreg import load_and_configure
 from services.user import User
