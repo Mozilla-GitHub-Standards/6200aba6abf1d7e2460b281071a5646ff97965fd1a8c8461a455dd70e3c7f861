@@ -39,16 +39,11 @@
 
 import unittest
 
-try:
-    from services.whoauth import APIFactory
-    from services.whoauth import WhoAuthentication
-    REPOZEWHO = True
-except ImportError:
-    REPOZEWHO = False
+from services.whoauth import WhoAuthentication, HAVE_REPOZE_WHO
 from services.tests.test_wsgiauth import HTTPBasicAuthAPITestCases
 
 
-if REPOZEWHO:
+if HAVE_REPOZE_WHO:
 
     class TestWhoAuthentication(HTTPBasicAuthAPITestCases, unittest.TestCase):
         """Tests for WhoAuthentication class in default configuration."""
@@ -77,7 +72,7 @@ if REPOZEWHO:
 
 def test_suite():
     suite = unittest.TestSuite()
-    if REPOZEWHO:
+    if HAVE_REPOZE_WHO:
         suite.addTest(unittest.makeSuite(TestWhoAuthentication))
         suite.addTest(unittest.makeSuite(TestWhoAuthentication_NewStyleAuth))
         suite.addTest(unittest.makeSuite(TestWhoAuthentication_FromConfig))
