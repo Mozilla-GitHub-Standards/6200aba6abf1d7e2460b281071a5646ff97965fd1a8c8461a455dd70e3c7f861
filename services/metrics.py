@@ -45,6 +45,7 @@ import sys
 import functools
 import exceptions
 from metlog.client import SEVERITY
+from datetime import datetime
 
 
 class MetlogHelper(object):
@@ -307,18 +308,55 @@ def getFrameInfo(frame):
 
 class ClassicLogger(object):
 
+    # This remaps Metlog severity levels back to standard python
+    # logging levels
+    LEVEL_MAP = {
+            SEVERITY.DEBUG: 'DEBUG',
+            SEVERITY.INFORMATIONAL: 'INFO',
+            SEVERITY.WARNING: 'WARNING',
+            SEVERITY.ERROR: 'ERROR',
+            SEVERITY.ALERT: 'EXCEPTION',
+            SEVERITY.CRITICAL: 'CRITICAL'
+            }
+
     def __init__(self, logger_name=None):
         if not logger_name:
             logger_name = 'anonymous'
         self._logger_name = logger_name
 
+
+    def apache_log(self, msg, level, timestamp):
+
+        # TODO: this is hardcoded just for our benchmark purposes
+        # we'll need to read this format out of configuration object
+        datefmt = "%Y-%m-%d %H:%M:%S"
+        log_format = "%(asctime)s,%(msecs)03d %(levelname)-5.5s [%(name)s] %(message)s"
+
+        rdict = {'asctime': timestamp.strftime(datefmt),
+                 'msecs' : timestamp.microsecond / 1000,
+                 'levelname': self.LEVEL_MAP[level],
+                 'name': self._logger_name,
+                 'message': msg,
+                }
+
+        return log_format % rdict
+
+
     def metlog_log(self, msg, level):
         '''
         If metlog is enabled, we're going to send messages here
         '''
+        timestamp = datetime.utcnow()
+
+        apache_msg = self.apache_log(msg, level, timestamp)
+
+        fields = {'logtext': apache_msg}
+
         HELPER._client.metlog(type='oldstyle',
+                timestamp=timestamp,
                 logger=self._logger_name,
-                severity=level, payload=msg)
+                severity=level, payload=msg,
+                fields=fields)
 
     @rebind_dispatcher('metlog_log')
     def _log(self, msg, level):
@@ -344,4 +382,5 @@ class ClassicLogger(object):
     def critical(self, msg):
         self._log(msg, SEVERITY.CRITICAL)
 
+# TODO: this won't play nice with the CEF code
 logger = ClassicLogger()

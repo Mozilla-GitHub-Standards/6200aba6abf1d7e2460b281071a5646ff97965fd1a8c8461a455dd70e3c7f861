@@ -291,7 +291,7 @@ class TestInvalidDecoration(unittest.TestCase):
                 pass
             self.fail('This should have raised an exception right away')
         except NotImplementedError, e:
-            assert e.message == 'Unsupported timing method'
+            assert e.args[0] == 'Unsupported timing method'
 
     def test_nested_class(self):
         class NestedClass(object):
@@ -305,7 +305,7 @@ class TestInvalidDecoration(unittest.TestCase):
             obj.nested_method(5, 2)
             raise AssertionError("Method invocation should fail")
         except NotImplementedError, e:
-            assert e.message == 'Unsupported timing method'
+            assert e.args[0] == 'Unsupported timing method'
 
     def test_timed_class(self):
         try:
@@ -313,7 +313,7 @@ class TestInvalidDecoration(unittest.TestCase):
             class TimedClass(object):
                 pass
         except NotImplementedError, e:
-            assert e.message == 'Unsupported timing method'
+            assert e.args[0] == 'Unsupported timing method'
 
 
 class RebindTarget(object):
@@ -356,7 +356,7 @@ class TestClassicLogger(unittest.TestCase):
     def test_oldstyle_logger(self):
         msgs = [(SEVERITY.DEBUG, 'debug', logger.debug),
         (SEVERITY.INFORMATIONAL, 'info', logger.info),
-        (SEVERITY.WARNING, 'warn', logger.warn),
+        (SEVERITY.WARNING, 'warning', logger.warn),
         (SEVERITY.ERROR, 'error', logger.error),
         (SEVERITY.ALERT, 'exception', logger.exception),
         (SEVERITY.CRITICAL, 'critical', logger.critical)]
@@ -372,10 +372,20 @@ class TestClassicLogger(unittest.TestCase):
 
             assert len(self._sender.method_calls) == 1
             timer_call = self._sender.method_calls[0]
-            assert timer_call[1][0]['logger'] == 'anonymous'
-            assert timer_call[1][0]['type'] == 'oldstyle'
-            assert timer_call[1][0]['payload'] == 'some %s' % msg
-            assert timer_call[1][0]['severity'] == lvl
+            event = timer_call[1][0]
+            assert event['logger'] == 'anonymous'
+            assert event['type'] == 'oldstyle'
+            assert event['payload'] == 'some %s' % msg
+            assert event['severity'] == lvl
+
+            # Check the that the 'logtext' field is being pushed 
+            full_log = event['fields']['logtext']
+            lvl_txt  = full_log[24:30].strip()
+
+            # Log messages only keep the first 5 characters of the
+            # text label for the severity level
+            assert msg.upper()[:5] == lvl_txt
+            assert full_log.endswith('some %s' % msg)
 
 
 helper_config = {
