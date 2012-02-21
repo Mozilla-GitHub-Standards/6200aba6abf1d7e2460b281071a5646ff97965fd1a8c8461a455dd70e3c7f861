@@ -234,11 +234,10 @@ class Config(dict):
             if self.splitchar not in key and not default:
                 continue
             skey = key
-            if self.splitchar in key:
-                skey = skey.split(self.splitchar)
-                if skey[0] != section:
+            if self.splitchar in skey:
+                if not skey.startswith(section + self.splitchar):
                     continue
-                skey = self.splitchar.join(skey[1:])
+                skey = skey[len(section + self.splitchar):]
             sec_cfg[skey] = value
         return sec_cfg
 
