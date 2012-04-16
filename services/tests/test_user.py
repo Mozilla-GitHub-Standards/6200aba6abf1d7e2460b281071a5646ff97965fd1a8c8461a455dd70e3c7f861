@@ -37,6 +37,7 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 import warnings
+import os
 
 from nose.plugins.skip import SkipTest
 
@@ -217,6 +218,8 @@ class TestUser(unittest.TestCase):
             raise SkipTest
 
         self._tests(load_and_configure(sql_config))
+        if os.path.exists("/tmp/test.db"):
+            os.unlink("/tmp/test.db")
 
     def test_user_ldap(self):
         try:
