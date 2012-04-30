@@ -40,12 +40,17 @@
 import abc
 import base64
 import functools
+import re
 import warnings
 from hashlib import sha1
 
 from services.pluginreg import PluginRegistry
 from services.util import email_to_idn
 from services.exceptions import NoEmailError, NoUserIDError  # NOQA
+
+
+# A valid (non-email-address) username must match this regex.
+VALID_USERNAME_RE = re.compile("^[a-zA-Z0-9._-]+$")
 
 
 def extract_username(username):
@@ -55,6 +60,8 @@ def extract_username(username):
     to the corresponding 32-character username
     """
     if '@' not in username:
+        if not VALID_USERNAME_RE.match(username):
+            raise ValueError("Invalid username: %s" % (username,))
         return username
     username = email_to_idn(username).lower()
     hashed = sha1(username).digest()
