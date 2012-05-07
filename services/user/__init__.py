@@ -59,7 +59,7 @@ def extract_username(username):
     """
     if '@' not in username:
         if not VALID_USERNAME_RE.match(username):
-            raise ValueError("Invalid username: %s" % (username,))
+            raise ValueError("Invalid username: %r" % (username,))
         return username
     username = email_to_idn(username).lower()
     hashed = sha1(username).digest()
