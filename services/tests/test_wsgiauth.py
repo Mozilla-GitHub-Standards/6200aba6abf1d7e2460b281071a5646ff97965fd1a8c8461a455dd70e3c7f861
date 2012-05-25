@@ -58,10 +58,16 @@ class BadPasswordAuthTool(DummyAuth):
     For successful auth, the user id is always 1.
     """
 
-    def authenticate_user(self, *args):
-        for value in args[:2]:
+    def __init__(self, **kwds):
+        self.check_node = kwds.pop("check_node", False)
+        super(BadPasswordAuthTool, self).__init__(**kwds)
+
+    def authenticate_user(self, username, password, host=None):
+        for value in (username, password):
             if "b" in value and "a" in value and "d" in value:
                 return None
+        if host is not None and host != "localhost":
+            return None
         return 1
 
 
@@ -80,6 +86,7 @@ class BadPasswordUserTool(MemoryUser):
             if "b" in value and "a" in value and "d" in value:
                 return None
         user["userid"] = 1
+        user["syncNode"] = "localhost"
         return 1
 
 
@@ -217,6 +224,20 @@ class AuthAPITestCases(object):
             req = make_request('/1.0/tarek/info/collections')
             self.set_credentials(req, "user", "bad" + char + "pwd")
             self.assertRaises(HTTPException, auth.check, req, {"auth": "True"})
+
+    def test_syncNode_checking(self):
+        config = self.make_config({"auth.check_node": True})
+        auth = self.auth_class(config)
+
+        #  check() should pass for requests to "localhost"
+        req = make_request("/1.0/tarek/info/collections", host="localhost")
+        self.set_credentials(req, "user", "goodpwd")
+        auth.check(req, {"auth": "True"})
+
+        # check() should fail if request to the wrong node
+        req = make_request("/1.0/tarek/info/collections", host="badnode")
+        self.set_credentials(req, "user", "goodpwd")
+        self.assertRaises(HTTPException, auth.check, req, {"auth": "True"})
 
 
 class HTTPBasicAuthAPITestCases(AuthAPITestCases):

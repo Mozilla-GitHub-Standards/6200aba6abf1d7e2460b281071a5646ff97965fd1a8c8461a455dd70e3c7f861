@@ -53,7 +53,7 @@ class DummyAuth(object):
         id_ = random.randint(1, 2000)
         ids = self._users.values()
         while id_ in ids:
-            id_ = random.randint(2000)
+            id_ = random.randint(1, 2000)
         self._users[user_name] = id_
         return True
 

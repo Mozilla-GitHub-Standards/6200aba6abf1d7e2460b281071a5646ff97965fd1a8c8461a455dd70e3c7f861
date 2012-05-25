@@ -65,6 +65,9 @@ class TestSQLAuth(unittest.TestCase):
 
     def tearDown(self):
         self.auth._engine.execute('delete from users')
+        sqlfile = self.auth.sqluri.split('sqlite:///')[-1]
+        if os.path.exists(sqlfile):
+            os.remove(sqlfile)
 
     def test_authenticate_user(self):
         if not isinstance(self.auth, SQLAuth):

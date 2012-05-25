@@ -37,6 +37,7 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 import warnings
+import os
 
 from nose.plugins.skip import SkipTest
 
@@ -217,6 +218,8 @@ class TestUser(unittest.TestCase):
             raise SkipTest
 
         self._tests(load_and_configure(sql_config))
+        if os.path.exists("/tmp/test.db"):
+            os.unlink("/tmp/test.db")
 
     def test_user_ldap(self):
         try:
@@ -276,6 +279,10 @@ class TestUser(unittest.TestCase):
         self.assertEquals(extract_username('username'), 'username')
         self.assertEquals(extract_username('test@test.com'),
                           'u2wqblarhim5su7pxemcbwdyryrghmuk')
+        # test for non A-Za-z0-9._- with no @
+        self.assertRaises(ValueError, extract_username, 'user\r\nname')
+        self.assertRaises(ValueError, extract_username, '%3Cscript%3E')
+        self.assertRaises(ValueError, extract_username, '')
         # test unicode/punycode (straight UTF8 and urlencoded)
         self.assertEquals(extract_username('Fran%c3%a7ios@valid.test'),
                           'ym3nccfhvptfrhn7nkhhyvzgf2yl7r5y')  # proper char
