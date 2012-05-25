@@ -38,7 +38,7 @@ import unittest
 from services.metrics import MetlogPlugin
 
 
-heredir = os.path.split(__file__)[0]
+heredir = os.path.dirname(__file__)
 metlog_cfg_path = os.path.join(heredir, 'metlog_test.ini')
 
 helper_config = {
