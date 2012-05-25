@@ -33,8 +33,7 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-
-from services import logger
+from metlog.holder import CLIENT_HOLDER
 from services.util import BackendError
 try:
     from recaptcha.client import captcha
@@ -53,9 +52,10 @@ class ServicesCaptcha(object):
         self.private_key = config.get('private_key')
         self.public_key = config.get('public_key')
         self.use_ssl = config.get('use_ssl', True)
+        self.logger = CLIENT_HOLDER.default_client
 
         if self.use and (self.private_key is None or self.public_key is None):
-            logger.error("No key defined for captcha!")
+            self.logger.error("No key defined for captcha!")
             raise BackendError()
 
     def check(self, request):
@@ -75,7 +75,7 @@ class ServicesCaptcha(object):
                                   self.private_key,
                                   remoteip=request.remote_addr)
             return resp.is_valid
-        logger.error('captcha submitted with no challenge or response')
+        self.logger.error('captcha submitted with no challenge or response')
         return False
 
     CAPTCHA_TMPL = """

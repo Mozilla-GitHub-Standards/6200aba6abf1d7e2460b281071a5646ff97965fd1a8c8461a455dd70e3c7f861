@@ -41,7 +41,7 @@ import random
 
 import ldap
 
-from services import logger
+from metlog.holder import CLIENT_HOLDER
 from services.user import User, _password_to_credentials
 from services.util import BackendError, ssha
 from services.ldappool import ConnectionManager
@@ -57,7 +57,7 @@ class LDAPUser(object):
         self.users_root = users_root
         self.search_root = search_root
         self.ldap_timeout = ldap_timeout
-
+        self.logger = CLIENT_HOLDER.default_client
         self.conn = ConnectionManager(ldapuri, **kw)
 
     def _conn(self, bind=None, passwd=None):
@@ -123,7 +123,7 @@ class LDAPUser(object):
             try:
                 res, __ = conn.add_s(dn, user)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not create the user.')
+                self.logger.debug('Could not create the user.')
                 raise BackendError(str(e))
 
         if res == ldap.RES_ADD:
@@ -168,7 +168,7 @@ class LDAPUser(object):
         except (ldap.NO_SUCH_OBJECT, ldap.INVALID_CREDENTIALS):
             return None
         except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-            logger.debug('Could not authenticate the user.')
+            self.logger.debug('Could not authenticate the user.')
             raise BackendError(str(e))
 
         if result is None:
@@ -207,7 +207,7 @@ class LDAPUser(object):
                 res = conn.search_st(dn, scope, attrlist=need,
                                      timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user info in ldap.')
+                self.logger.debug('Could not get the user info in ldap.')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return user
@@ -311,7 +311,7 @@ class LDAPUser(object):
                 except ldap.NO_SUCH_OBJECT:
                     return False
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                    logger.debug('Could not delete the user in ldap')
+                    self.logger.debug('Could not delete the user in ldap')
                     raise BackendError(str(e))
         except ldap.INVALID_CREDENTIALS:
             return False
@@ -347,7 +347,7 @@ class LDAPUser(object):
                 try:
                     res, __ = conn.modify_s(dn, action)
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                    logger.debug('Could not update the password in ldap.')
+                    self.logger.debug('Could not update the password in ldap.')
                     raise BackendError(str(e))
         except ldap.INVALID_CREDENTIALS:
             return False
@@ -391,7 +391,7 @@ class LDAPUser(object):
                 res = conn.search_st(dn, scope, filterstr=filter,
                                      attrlist=attrs, timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user info from ldap')
+                self.logger.debug('Could not get the user info from ldap')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return None
@@ -443,7 +443,7 @@ class LDAPUser(object):
             if value == previous_loop_value:
                 # this is bad. It means the problem isn't a race condition.
                 # Bail.
-                logger.error('failed uid increment, loop value is unchanged')
+                self.logger.error('failed uid increment, loop value is unchanged')
                 raise BackendError('unable to generate new account')
             previous_loop_value = value
 
@@ -460,7 +460,7 @@ class LDAPUser(object):
                     #if we don't bomb out here, we have a valid id
                     return int(value)
                 except ldap.NO_SUCH_ATTRIBUTE, e:
-                    logger.error('collision on getting next id. %i' \
+                    self.logger.error('collision on getting next id. %i' \
                             % new_value)
                     flag = flag + 1
                     continue

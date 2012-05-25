@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Rob Miller (rmiller@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,6 +43,8 @@ import sys
 import signal
 from time import sleep
 
+from metlog.decorators.stats import incr_count, timeit
+
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
 
@@ -53,13 +56,11 @@ from webob import Response
 
 from services.util import (CatchErrorMiddleware, round_time, BackendError,
                            create_hash, HTTPJsonServiceUnavailable)
-from services import logger
 from services.config import Config
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
 from services.pluginreg import load_and_configure
 from services.user import User
-from services.metrics import rebind_dispatcher
 
 
 class SyncServerApp(object):
@@ -106,9 +107,9 @@ class SyncServerApp(object):
         self.controllers = dict([(name, klass(self)) for name, klass in
                                  controllers.items()])
 
-        # Setup a default metrics logger
-        if self.modules.get('metlog_helper') != None:
-            self.metlog = self.modules.get('metlog_helper')._client
+        # stash the metlog client in a more convenient spot
+        if self.modules.get('metlog_plugin') != None:
+            self.logger = self.modules.get('metlog_plugin').default_client
 
         for url in urls:
             if len(url) == 4:
@@ -124,6 +125,13 @@ class SyncServerApp(object):
             if isinstance(verbs, str):
                 verbs = [verbs]
 
+            # wrap action methods w/ metlog decorators
+            controller_instance = self.controllers.get(controller)
+            if controller_instance is not None:
+                method = getattr(controller_instance, action, None)
+                if method is not None:
+                    method = incr_count(timeit(method))
+                    setattr(controller_instance, action, method)
             self.mapper.connect(None, match, controller=controller,
                                 action=action, conditions=dict(method=verbs),
                                 **extras)
@@ -288,19 +296,9 @@ class SyncServerApp(object):
                 self.auth.acknowledge(request, response)
                 return response
 
-    def _metlog_dispatch_request_with_match(self, request, match):
-        function = self._get_function(match['controller'], match['action'])
-        method_name = "%s.%s" % (function.__module__, function.func_name)
-        with self.metlog.timer(method_name):
-            return self.__dispatch_request_with_match(function, request, match)
-
-    @rebind_dispatcher('_metlog_dispatch_request_with_match')
     def _dispatch_request_with_match(self, request, match):
         """Dispatch a request according to a URL routing match."""
         function = self._get_function(match['controller'], match['action'])
-        return self.__dispatch_request_with_match(function, request, match)
-
-    def __dispatch_request_with_match(self, function, request, match):
         if function is None:
             raise HTTPNotFound('Unknown URL %r' % request.path_info)
 
@@ -327,8 +325,8 @@ class SyncServerApp(object):
             extra_info = '\n'.join(extra_info)
             error_log = '%s\n%s\n%s' % (err_info, err_trace, extra_info)
             hash = create_hash(error_log)
-            logger.error(hash)
-            logger.error(error_log)
+            self.logger.error(hash)
+            self.logger.error(error_log)
             msg = json.dumps("application error: crash id %s" % hash)
             if err.retry_after is not None:
                 if err.retry_after == 0:
@@ -364,7 +362,7 @@ class SyncServerApp(object):
             # if it's not str it's unicode, which really shouldn't happen
             module = getattr(function, '__module__', 'unknown')
             name = getattr(function, '__name__', 'unknown')
-            logger.warn('Unicode response returned from: %s - %s'
+            self.logger.warn('Unicode response returned from: %s - %s'
                         % (module, name))
             response.unicode_body = result
         return response

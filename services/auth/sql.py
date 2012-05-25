@@ -44,7 +44,7 @@ from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.pool import NullPool
 
-from services import logger
+from metlog.holder import CLIENT_HOLDER
 from services.util import validate_password, ssha256, safe_execute
 from services.auth.resetcode import ResetCodeManager
 from services.resetcodes import ResetCode
@@ -101,6 +101,7 @@ class SQLAuth(ResetCodeManager):
         if create_tables:
             users.create(checkfirst=True)
         self.sqluri = sqluri
+        self.logger = CLIENT_HOLDER.default_client
         ResetCodeManager.__init__(self, engine, create_tables=create_tables)
 
     def _get_username(self, uid):
@@ -204,7 +205,7 @@ class SQLAuth(ResetCodeManager):
         if self._get_reset_code(user_id) == key:
             self.clear_reset_code(user_id)
         else:
-            logger.error("bad key used for update password")
+            self.logger.error("bad key used for update password")
             return False
 
         password_hash = ssha256(password)
@@ -279,6 +280,6 @@ class SQLAuth(ResetCodeManager):
         query = update(users).values(reset=code, reset_expiration=expiration)
         res = safe_execute(self._engine, query.where(users.c.id == user_id))
         if res.rowcount != 1:
-            logger.debug('Unable to add a new reset code')
+            self.logger.debug('Unable to add a new reset code')
             return None  # XXX see if appropriate
         return code

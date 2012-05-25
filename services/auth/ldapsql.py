@@ -1,4 +1,4 @@
-# -*- encoding: utf8 -*-
+# -*- encoding: utf-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -46,11 +46,11 @@ from sqlalchemy import Integer, String
 from sqlalchemy import create_engine, SmallInteger
 from sqlalchemy.sql import select, insert, update, and_
 
+from metlog.holder import CLIENT_HOLDER
 from services.util import BackendError, ssha
 from services.auth import NodeAttributionError
 from services.ldappool import ConnectionManager, StateConnector
 from services.auth.resetcode import ResetCodeManager
-from services.metrics import logger
 
 #
 # Custom SQL tables:
@@ -130,6 +130,7 @@ class LDAPAuth(ResetCodeManager):
             engine = None
 
         self.check_node = check_node
+        self.logger = CLIENT_HOLDER.default_client
         ResetCodeManager.__init__(self, engine, create_tables=create_tables)
 
     def _conn(self, bind=None, passwd=None):
@@ -147,7 +148,7 @@ class LDAPAuth(ResetCodeManager):
                                       attrlist=[],
                                       timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user info from ldap')
+                self.logger.debug('Could not get the user info from ldap')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return None
@@ -175,7 +176,7 @@ class LDAPAuth(ResetCodeManager):
                                       attrlist=['uid'],
                                       timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user info from ldap')
+                self.logger.debug('Could not get the user info from ldap')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return None
@@ -198,7 +199,7 @@ class LDAPAuth(ResetCodeManager):
                                       attrlist=['uidNumber'],
                                       timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.OTHER), e:
-                logger.debug('Could not get the user id from ldap.')
+                self.logger.debug('Could not get the user id from ldap.')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return None
@@ -240,7 +241,7 @@ class LDAPAuth(ResetCodeManager):
             try:
                 res, __ = conn.add_s(dn, user)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not create the user.')
+                self.logger.debug('Could not create the user.')
                 raise BackendError(str(e))
 
         return res == ldap.RES_ADD
@@ -271,7 +272,7 @@ class LDAPAuth(ResetCodeManager):
         except (ldap.NO_SUCH_OBJECT, ldap.INVALID_CREDENTIALS):
             return None
         except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-            logger.debug('Could not authenticate the user.')
+            self.logger.debug('Could not authenticate the user.')
             raise BackendError(str(e))
 
         if user is None:
@@ -316,7 +317,7 @@ class LDAPAuth(ResetCodeManager):
                 res = conn.search_st(dn, scope, attrlist=['mail'],
                                      timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user info in ldap.')
+                self.logger.debug('Could not get the user info in ldap.')
                 raise BackendError(str(e))
             except ldap.NO_SUCH_OBJECT:
                 return None, None
@@ -353,7 +354,7 @@ class LDAPAuth(ResetCodeManager):
             try:
                 res, __ = conn.modify_s(dn, user)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not update the email field in ldap.')
+                self.logger.debug('Could not update the email field in ldap.')
                 raise BackendError(str(e))
 
         return res == ldap.RES_MODIFY
@@ -384,7 +385,7 @@ class LDAPAuth(ResetCodeManager):
                 try:
                     res, __ = conn.modify_s(user_dn, user)
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                    logger.debug('Could not update the password in ldap.')
+                    self.logger.debug('Could not update the password in ldap.')
                     raise BackendError(str(e))
         except ldap.INVALID_CREDENTIALS:
             return False
@@ -413,7 +414,7 @@ class LDAPAuth(ResetCodeManager):
         if self.verify_reset_code(user_id, key):
             self.clear_reset_code(user_id)
         else:
-            logger.error("bad key used for update password")
+            self.logger.error("bad key used for update password")
             return False
 
         password_hash = ssha(new_password)
@@ -424,7 +425,7 @@ class LDAPAuth(ResetCodeManager):
                 try:
                     res, __ = conn.modify_s(user_dn, user)
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                    logger.debug('Could not update the password in ldap.')
+                    self.logger.debug('Could not update the password in ldap.')
                     raise BackendError(str(e))
         except ldap.INVALID_CREDENTIALS:
             return False
@@ -451,7 +452,7 @@ class LDAPAuth(ResetCodeManager):
                 except ldap.NO_SUCH_OBJECT:
                     return False
                 except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                    logger.debug('Could not delete the user in ldap')
+                    self.logger.debug('Could not delete the user in ldap')
                     raise BackendError(str(e))
         except ldap.INVALID_CREDENTIALS:
             return False
@@ -473,7 +474,7 @@ class LDAPAuth(ResetCodeManager):
                                      attrlist=['primaryNode'],
                                      timeout=self.ldap_timeout)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not get the user node in ldap')
+                self.logger.debug('Could not get the user node in ldap')
                 raise BackendError(str(e))
 
         res = res[0][1]
@@ -498,7 +499,7 @@ class LDAPAuth(ResetCodeManager):
         res = res.fetchone()
         if res is None:
             # unable to get a node
-            logger.debug('Unable to get a node for user id: %s' % str(user_id))
+            self.logger.debug('Unable to get a node for user id: %s' % str(user_id))
             raise NodeAttributionError(user_id)
 
         node = str(res.node)
@@ -513,12 +514,12 @@ class LDAPAuth(ResetCodeManager):
             try:
                 ldap_res, __ = conn.modify_s(dn, user)
             except (ldap.TIMEOUT, ldap.SERVER_DOWN, ldap.OTHER), e:
-                logger.debug('Could not update the server node in LDAP')
+                self.logger.debug('Could not update the server node in LDAP')
                 raise BackendError(str(e))
 
         if ldap_res != ldap.RES_MODIFY:
             # unable to set the node in LDAP
-            logger.debug('Unable to set the newly attributed node in LDAP '
+            self.logger.debug('Unable to set the newly attributed node in LDAP '
                          'for %s' % str(user_id))
             raise NodeAttributionError(user_id)
 

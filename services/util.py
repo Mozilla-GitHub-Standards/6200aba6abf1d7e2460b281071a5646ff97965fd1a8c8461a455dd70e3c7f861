@@ -57,9 +57,8 @@ from webob import Response
 
 from sqlalchemy.exc import OperationalError, TimeoutError
 
+from metlog.holder import CLIENT_HOLDER
 from services.exceptions import BackendError, BackendTimeoutError  # NOQA
-
-from services.metrics import logger
 
 random.seed()
 _RE_CODE = re.compile('[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}')
@@ -294,7 +293,7 @@ class CatchErrorMiddleware(object):
     def __init__(self, app, logger_name='root', hook=None,
                  type='application/json'):
         self.app = app
-        self.logger = logger
+        self.logger = CLIENT_HOLDER.default_client
         self.hook = hook
         self.ctype = type
 
@@ -334,6 +333,7 @@ def safe_execute(engine, *args, **kwargs):
         return engine.execute(*args, **kwargs)
     except (OperationalError, TimeoutError), exc:
         err = traceback.format_exc()
+        logger = CLIENT_HOLDER.default_client
         logger.error(err)
         raise BackendError(str(exc))
 

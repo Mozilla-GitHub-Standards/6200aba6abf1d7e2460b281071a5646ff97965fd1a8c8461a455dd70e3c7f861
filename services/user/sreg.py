@@ -39,7 +39,6 @@
 import simplejson as json
 import urlparse
 
-from services import logger
 from services.http_helpers import get_url
 from services.user.mozilla_ldap import LDAPUser
 from services.user import User, _password_to_credentials
@@ -160,7 +159,7 @@ class SregUser(LDAPUser):
             try:
                 body = json.loads(body)
             except Exception:
-                logger.error("bad json body from sreg (%s): %s" %
+                self.logger.error("bad json body from sreg (%s): %s" %
                                                         (url, body))
 
         return status, body
