@@ -12,3 +12,5 @@ html
 doc/build
 \.coverage
 .git
+syntax: glob
+test
