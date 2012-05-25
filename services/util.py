@@ -334,6 +334,15 @@ def safe_execute(engine, *args, **kwargs):
     try:
         return engine.execute(*args, **kwargs)
     except (OperationalError, TimeoutError), exc:
+        # beyond this point, the connector is removed from the pool
+        retry = '2013' in str(exc)
+    try:
+        if retry:
+            return engine.execute(*args, **kwargs)
+        else:
+            # re-raise
+            raise exc
+    except (OperationalError, TimeoutError), exc:
         err = traceback.format_exc()
         logger.error(err)
         raise BackendError(str(exc))

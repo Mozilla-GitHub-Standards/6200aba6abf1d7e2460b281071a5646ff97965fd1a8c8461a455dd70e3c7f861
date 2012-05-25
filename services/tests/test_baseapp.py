@@ -169,7 +169,7 @@ class TestBaseApp(unittest.TestCase):
         finally:
             logger.error = old
 
-        self.assertTrue(errors[1].startswith('BackendError on http://here'))
+        self.assertTrue(errors[1].startswith('GET /boom'))
         for value in app.get_infos(request).values():
             self.assertTrue(value in errors[1])
 

@@ -50,7 +50,7 @@ class BackendError(Exception):
         - backend: if provided, the backend from where originated the error.
           it will be used to render more details, It can be any kind of object
           as __str__() will be called on it.
-
+        - request: the original Request object, if available.
         """
         self.msg = msg
         self.server = server
