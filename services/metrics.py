@@ -41,7 +41,7 @@ from metlog.config import client_from_stream_config
 from metlog.holder import CLIENT_HOLDER
 
 
-def MetlogPlugin(**kwargs):
+def MetlogLoader(**kwargs):
     # Delegates to metlog-py's client configuration functions
     cfgfilepath = kwargs['config']
     with open(cfgfilepath) as cfgfile:

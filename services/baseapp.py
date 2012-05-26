@@ -99,6 +99,10 @@ class SyncServerApp(object):
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
+        # stash the metlog client in a more convenient spot
+        if self.modules.get('metlog_loader') != None:
+            self.logger = self.modules.get('metlog_loader').default_client
+
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
         self.auth = None if auth_class is None else auth_class(self.config)
@@ -106,10 +110,6 @@ class SyncServerApp(object):
         # loading and connecting controllers
         self.controllers = dict([(name, klass(self)) for name, klass in
                                  controllers.items()])
-
-        # stash the metlog client in a more convenient spot
-        if self.modules.get('metlog_plugin') != None:
-            self.logger = self.modules.get('metlog_plugin').default_client
 
         for url in urls:
             if len(url) == 4:
