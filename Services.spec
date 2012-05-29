@@ -1,6 +1,6 @@
 %define name python26-services
 %define pythonname Services
-%define version 2.8
+%define version 2.9
 %define unmangled_version %{version}
 %define release 1
 
