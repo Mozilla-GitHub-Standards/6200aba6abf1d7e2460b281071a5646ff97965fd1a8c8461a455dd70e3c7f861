@@ -208,8 +208,7 @@ class TestLDAPConnection(unittest.TestCase):
             with cm.connection('dn', 'pass'):
                 pass
         except BackendError, err:
-            wanted = 'BackendTimeoutError\n'\
-                     'LDAP Connector (disconnected)\n\nBoo'
+            wanted = 'BackendTimeoutError\n\nBoo'
             self.assertEqual(wanted, str(err))
         else:
             raise AssertionError()
