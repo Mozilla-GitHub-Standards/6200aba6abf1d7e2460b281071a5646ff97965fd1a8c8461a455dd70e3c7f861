@@ -208,12 +208,18 @@ class ConnectionManager(object):
                 tries += 1
 
         if not connected:
+            # pass through logic errors directly.
             if isinstance(exc, (ldap.NO_SUCH_OBJECT,
-                                ldap.INVALID_CREDENTIALS)):
+                                ldap.INVALID_CREDENTIALS,
+                                ldap.INVALID_DN_SYNTAX)):
                 raise exc
 
-            # that's something else
-            raise BackendError(str(exc), backend=conn)
+            # operational errors become a BackendError.
+            msg = str(exc)
+            if isinstance(exc, ldap.TIMEOUT):
+                raise BackendTimeoutError(msg, server=self.uri)
+            else:
+                raise BackendError(msg, backend=conn)
         return conn
 
     def _get_connection(self, bind=None, passwd=None):
