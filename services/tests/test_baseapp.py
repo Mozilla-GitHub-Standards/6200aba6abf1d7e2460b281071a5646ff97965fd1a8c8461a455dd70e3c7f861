@@ -100,11 +100,11 @@ class TestBaseApp(unittest.TestCase):
     config = {'host:here.one.two': 1,
               'one.two': 2,
               'auth.backend': 'services.auth.dummy.DummyAuth',
-              'app.modules': ['mod1', 'mod2', 'metlog_plugin'],
+              'app.modules': ['mod1', 'mod2', 'metlog_loader'],
               'mod1.backend': 'services.tests.test_baseapp.Mod1',
               'mod2.backend': 'services.tests.test_baseapp.Mod2',
-              'metlog_plugin.backend': 'services.metrics.MetlogPlugin',
-              'metlog_plugin.config': metlog_cfg_path,
+              'metlog_loader.backend': 'services.metrics.MetlogLoader',
+              'metlog_loader.config': metlog_cfg_path,
               }
     auth_class = None
 
@@ -131,9 +131,9 @@ class TestBaseApp(unittest.TestCase):
     def test_retry_after(self):
         config = {'global.retry_after': 60,
                   'auth.backend': 'services.auth.dummy.DummyAuth',
-                  'app.modules': ['metlog_plugin'],
-                  'metlog_plugin.backend': 'services.metrics.MetlogPlugin',
-                  'metlog_plugin.config': metlog_cfg_path,
+                  'app.modules': ['metlog_loader'],
+                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
+                  'metlog_loader.config': metlog_cfg_path,
                   }
         urls = [('GET', '/boom', 'foo', 'boom'),
                 ('GET', '/boom2', 'foo', 'boom2'),
@@ -188,9 +188,9 @@ class TestBaseApp(unittest.TestCase):
 
         config = {'global.heartbeat_page': '__heartbeat__',
                   'global.debug_page': '__debug__',
-                  'app.modules': ['metlog_plugin'],
-                  'metlog_plugin.backend': 'services.metrics.MetlogPlugin',
-                  'metlog_plugin.config': metlog_cfg_path,
+                  'app.modules': ['metlog_loader'],
+                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
+                  'metlog_loader.config': metlog_cfg_path,
                   'auth.backend': 'services.auth.dummy.DummyAuth'}
         urls = []
         controllers = {}

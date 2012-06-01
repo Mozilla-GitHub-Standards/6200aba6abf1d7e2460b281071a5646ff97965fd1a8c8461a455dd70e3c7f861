@@ -35,7 +35,7 @@
 # ***** END LICENSE BLOCK *****
 import os.path
 import unittest
-from services.metrics import MetlogPlugin
+from services.metrics import MetlogLoader
 
 
 heredir = os.path.dirname(__file__)
@@ -48,7 +48,7 @@ helper_config = {
 
 class TestMetlogPlugin(unittest.TestCase):
     def test_creates_client(self):
-        holder = MetlogPlugin(**helper_config)
+        holder = MetlogLoader(**helper_config)
         self.assertFalse(holder.default_client is None)
         sender = holder.default_client.sender
         self.assertEqual(sender.__class__.__name__, 'DebugCaptureSender')
