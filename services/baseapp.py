@@ -91,12 +91,11 @@ class SyncServerApp(object):
         # check if we want to clean when the app ends
         self.sigclean = self.config.get('global.clean_shutdown', True)
 
+        # load the specified plugin modules
         self.modules = dict()
-
         app_modules = self.config.get('app.modules', [])
         if isinstance(app_modules, basestring):
             app_modules = [app_modules]
-
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
