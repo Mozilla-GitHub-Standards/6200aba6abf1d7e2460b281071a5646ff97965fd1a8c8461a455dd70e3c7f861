@@ -37,8 +37,14 @@
 """
 server-core plugin to set up metlog.
 """
+from contextlib import contextmanager
 from metlog.config import client_from_stream_config
+from metlog.decorators.base import MetlogDecorator
 from metlog.holder import CLIENT_HOLDER
+import threading
+
+
+_LOCAL_STORAGE = threading.local()
 
 
 def MetlogLoader(**kwargs):
@@ -48,3 +54,43 @@ def MetlogLoader(**kwargs):
         metlog = client_from_stream_config(cfgfile, 'metlog')
         CLIENT_HOLDER.set_client(metlog.logger, metlog)
     return CLIENT_HOLDER
+
+
+def update_metlog_data(update_data):
+    """
+    Update the 'metlog_data' dictionary for this request w/ the provided data.
+    """
+    if not hasattr(_LOCAL_STORAGE, 'metlog_data'):
+        raise AttributeError("No `metlog_data`; are you in a "
+                             "thread_context?")
+    _LOCAL_STORAGE.metlog_data.update(update_data)
+
+
+@contextmanager
+def thread_context(callback):
+    """
+    This is a context manager that accepts a callback function and returns a
+    thread local dictionary object. Upon exit, the callback function will be
+    called and passed that dictionary as the sole argument, after which the
+    dictionary will be deleted.
+    """
+    _LOCAL_STORAGE.metlog_data = dict()
+    yield _LOCAL_STORAGE.metlog_data
+    try:
+        callback(_LOCAL_STORAGE.metlog_data)
+    finally:
+        del _LOCAL_STORAGE.metlog_data
+
+
+class send_services_data(MetlogDecorator):
+    """
+    Decorator that wraps a function with a threadlocal metlog data dictionary.
+    Anything written into this dictionary from within the decorated code will
+    be sent as a 'services' message through metlog when the function returns.
+    """
+    def metlog_call(self, *args, **kwargs):
+        def send_logmsg(metlog_data):
+            self.client.metlog('services', fields=metlog_data)
+
+        with thread_context(send_logmsg):
+            return self._fn(*args, **kwargs)
