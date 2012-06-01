@@ -77,7 +77,8 @@ def thread_context(callback):
     _LOCAL_STORAGE.metlog_data = dict()
     yield _LOCAL_STORAGE.metlog_data
     try:
-        callback(_LOCAL_STORAGE.metlog_data)
+        if _LOCAL_STORAGE.metlog_data:
+            callback(_LOCAL_STORAGE.metlog_data)
     finally:
         del _LOCAL_STORAGE.metlog_data
 
