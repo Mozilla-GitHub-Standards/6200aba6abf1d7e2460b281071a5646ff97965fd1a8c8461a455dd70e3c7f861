@@ -128,10 +128,13 @@ class SyncServerApp(object):
             # wrap action methods w/ metlog decorators
             controller_instance = self.controllers.get(controller)
             if controller_instance is not None:
+                wrapped_name = '_%s_wrapped' % action
                 method = getattr(controller_instance, action, None)
-                if method is not None:
-                    method = send_services_data(incr_count(timeit(method)))
-                    setattr(controller_instance, action, method)
+                if ((method is not None) and
+                    (not hasattr(controller_instance, wrapped_name))):
+                    # add wrapped method
+                    wrapped = send_services_data(incr_count(timeit(method)))
+                    setattr(controller_instance, wrapped_name, wrapped)
             self.mapper.connect(None, match, controller=controller,
                                 action=action, conditions=dict(method=verbs),
                                 **extras)
@@ -374,7 +377,11 @@ class SyncServerApp(object):
             controller = self.controllers[controller]
         except KeyError:
             return None
-        return getattr(controller, action, None)
+        wrapped_name = '_%s_wrapped' % action
+        fn = getattr(controller, wrapped_name, None)
+        if fn is None:
+            fn = getattr(controller, action, None)
+        return fn
 
 
 def set_app(urls, controllers, klass=SyncServerApp, auth_class=None,
