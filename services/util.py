@@ -330,7 +330,16 @@ def safe_execute(engine, *args, **kwargs):
     on any OperationalError errors and log it.
     """
     try:
-        return engine.execute(*args, **kwargs)
+        # It's possible for the backend to raise a "connection invalided" error
+        # if e.g. the server timed out the connection.  SQLAlchemy purges the
+        # the whole connection pool if this happens, so one retry is enough.
+        try:
+            return engine.execute(*args, **kwargs)
+        except (OperationalError, TimeoutError), exc:
+            if exc.connection_invalidated:
+                return engine.execute(*args, **kwargs)
+            else:
+                raise
     except (OperationalError, TimeoutError), exc:
         err = traceback.format_exc()
         logger = CLIENT_HOLDER.default_client

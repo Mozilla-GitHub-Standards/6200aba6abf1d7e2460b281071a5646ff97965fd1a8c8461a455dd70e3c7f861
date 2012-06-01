@@ -98,13 +98,17 @@ if LDAP:
         def __init__(self, uri, bind=None, passwd=None, **kw):
             if bind is not None and passwd is not None:
                 self.simple_bind_s(bind, passwd)
-            self.uri = uri
+            self._uri = uri
             self._next_id = 30
             self._l = self
+            self.connected = False
+            self.who = ''
 
         def unbind_ext(self, *args, **kw):
             if random.randint(1, 10) == 1:
                 raise ldap.LDAPError('Invalid State')
+            self.connected = False
+            self.who = ''
 
         def __repr__(self):
             return '<%s - %s>' % (self.who, self.cred)

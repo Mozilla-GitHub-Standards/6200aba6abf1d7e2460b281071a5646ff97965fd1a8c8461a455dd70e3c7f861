@@ -11,7 +11,6 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
@@ -83,7 +82,8 @@ class StateConnector(ReconnectLDAPObject):
         self.connected = True
         self.who = who
         self.cred = cred
-        self._connection_time = time.time()
+        if self._connection_time is None:
+            self._connection_time = time.time()
         return res
 
     def unbind_ext_s(self, serverctrls=None, clientctrls=None):
@@ -94,7 +94,6 @@ class StateConnector(ReconnectLDAPObject):
             self.connected = False
             self.who = None
             self.cred = None
-            self._connection_time = None
 
     def add_s(self, *args, **kwargs):
         return self._apply_method_s(ReconnectLDAPObject.add_s, *args,
@@ -145,7 +144,11 @@ class ConnectionManager(object):
                 if conn.get_lifetime() > self.max_lifetime:
                     # this connector has lived for too long,
                     # we want to unbind it and remove it from the pool
-                    conn.unbind_s()
+                    try:
+                        conn.unbind_s()
+                    except Exception:
+                        pass  # XXX we will see later
+
                     self._pool.remove(conn)
                     continue
 
@@ -158,14 +161,14 @@ class ConnectionManager(object):
 
             # no connector was available, let's rebind the latest inactive one
             if len(inactives) > 0:
-                conn = inactives[0]
-                try:
-                    self._bind(conn, bind, passwd)
-                except:
-                    self._pool.remove(conn)
-                    raise
+                for conn in inactives:
+                    try:
+                        self._bind(conn, bind, passwd)
+                        return conn
+                    except Exception:
+                        self._pool.remove(conn)
 
-                return conn
+                return None
 
         # There are no connector that match
         return None
@@ -176,40 +179,7 @@ class ConnectionManager(object):
             conn.start_tls_s()
 
         if bind is not None:
-            tries = 0
-            connected = False
-            e = None
-            while tries < self.retry_max and not connected:
-                try:
-                    conn.simple_bind_s(bind, passwd)
-                except (ldap.SERVER_DOWN, ldap.TIMEOUT), e:
-                    # the server seems down, we can retry
-                    time.sleep(self.retry_delay)
-                    tries += 1
-                except (ldap.INVALID_CREDENTIALS, ldap.INVALID_DN_SYNTAX):
-                    raise
-                except ldap.LDAPError, e:
-                    # invalid connection, or unknown error should die
-                    raise BackendError(str(e), backend=conn)
-                else:
-                    # we're good
-                    connected = True
-
-            # we failed
-            if not connected:
-                if isinstance(e, ldap.SERVER_DOWN):
-                    # we need to unbind in that case
-                    conn.unbind_s()
-
-                if e is not None:
-                    msg = str(e)
-                else:
-                    msg = 'Unable to connect to server'
-
-                if isinstance(e, ldap.TIMEOUT):
-                    raise BackendTimeoutError(msg, server=self.uri)
-                else:
-                    raise BackendError(msg, backend=conn)
+            conn.simple_bind_s(bind, passwd)
 
         conn.active = True
 
@@ -220,11 +190,36 @@ class ConnectionManager(object):
             - bind: login
             - passwd: password
         """
+        tries = 0
+        connected = False
         passwd = passwd.encode('utf8')
-        conn = self.connector_cls(self.uri, retry_max=self.retry_max,
-                                  retry_delay=self.retry_delay)
-        conn.timeout = self.timeout
-        self._bind(conn, bind, passwd)
+        exc = None
+
+        # trying retry_max times in a row with a fresh connector
+        while tries < self.retry_max and not connected:
+            try:
+                conn = self.connector_cls(self.uri, retry_max=self.retry_max,
+                                          retry_delay=self.retry_delay)
+                conn.timeout = self.timeout
+                self._bind(conn, bind, passwd)
+                connected = True
+            except ldap.LDAPError, exc:
+                time.sleep(self.retry_delay)
+                tries += 1
+
+        if not connected:
+            # pass through logic errors directly.
+            if isinstance(exc, (ldap.NO_SUCH_OBJECT,
+                                ldap.INVALID_CREDENTIALS,
+                                ldap.INVALID_DN_SYNTAX)):
+                raise exc
+
+            # operational errors become a BackendError.
+            msg = str(exc)
+            if isinstance(exc, ldap.TIMEOUT):
+                raise BackendTimeoutError(msg, server=self.uri)
+            else:
+                raise BackendError(msg, backend=conn)
         return conn
 
     def _get_connection(self, bind=None, passwd=None):
