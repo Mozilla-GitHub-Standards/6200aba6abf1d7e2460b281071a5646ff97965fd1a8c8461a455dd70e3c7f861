@@ -56,7 +56,7 @@ import warnings
 from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
-from sqlalchemy.exc import OperationalError, TimeoutError
+from sqlalchemy.exc import DBAPIError, OperationalError, TimeoutError
 
 from services import logger
 from services.exceptions import BackendError, BackendTimeoutError  # NOQA
@@ -337,7 +337,7 @@ def safe_execute(engine, *args, **kwargs):
         # the whole connection pool if this happens, so one retry is enough.
         try:
             return engine.execute(*args, **kwargs)
-        except (OperationalError, TimeoutError), exc:
+        except DBAPIError, exc:
             if exc.connection_invalidated:
                 return engine.execute(*args, **kwargs)
             else:
