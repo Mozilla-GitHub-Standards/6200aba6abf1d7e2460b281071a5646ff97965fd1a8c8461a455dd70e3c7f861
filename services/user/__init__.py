@@ -41,7 +41,6 @@ import abc
 import base64
 import functools
 import re
-import warnings
 from hashlib import sha1
 
 from services.pluginreg import PluginRegistry
@@ -227,10 +226,6 @@ def _password_to_credentials(func):
     @functools.wraps(func)
     def wrapped_method(self, user, credentials=None, *args, **kwds):
         if isinstance(credentials, basestring):
-            msg = "Method %s.%s should be passed a dict of credentials, "\
-                  "not a raw password"
-            msg = msg % (self.__class__.__name__, func.__name__,)
-            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             username = user.get("username")
             credentials = {"username": username, "password": credentials}
         return func(self, user, credentials, *args, **kwds)
