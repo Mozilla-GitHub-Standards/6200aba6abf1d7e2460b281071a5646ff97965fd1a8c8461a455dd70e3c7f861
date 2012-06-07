@@ -38,7 +38,7 @@ import re
 from setuptools import setup, find_packages
 
 install_requires = ['SQLALchemy<=0.6.99', 'Paste', 'PasteDeploy', 'WebOb',
-                    'Routes', 'simplejson', 'cef', 'wsgiproxy']
+                    'Routes', 'simplejson', 'cef', 'wsgiproxy', 'metlog-py']
 
 
 # extracting the version number from the .spec file

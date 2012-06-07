@@ -13,3 +13,4 @@ SQLAlchemy <= 0.6.99
 MySQL-python
 WSGIProxy
 recaptcha-client
+metlog-py

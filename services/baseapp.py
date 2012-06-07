@@ -43,7 +43,10 @@ import sys
 import signal
 from time import sleep
 
+from metlog.client import MetlogClient
 from metlog.decorators.stats import incr_count, timeit
+from metlog.holder import CLIENT_HOLDER
+from metlog.senders.logging import StdLibLoggingSender
 
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
@@ -99,9 +102,15 @@ class SyncServerApp(object):
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
-        # stash the metlog client in a more convenient spot
         if self.modules.get('metlog_loader') != None:
+            # stash the metlog client in a more convenient spot
             self.logger = self.modules.get('metlog_loader').default_client
+        else:
+            # there was no metlog config, default to using StdLibLoggingSender
+            sender = StdLibLoggingSender('syncstorage', json_types=[])
+            metlog = MetlogClient(sender, 'syncstorage')
+            CLIENT_HOLDER.set_client(metlog.logger, metlog)
+            self.logger = metlog
 
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
