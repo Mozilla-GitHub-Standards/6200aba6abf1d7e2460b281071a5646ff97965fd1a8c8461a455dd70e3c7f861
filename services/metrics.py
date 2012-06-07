@@ -90,8 +90,11 @@ class send_services_data(MetlogDecorator):
     be sent as a 'services' message through metlog when the function returns.
     """
     def metlog_call(self, *args, **kwargs):
+        req = args[0]
+
         def send_logmsg(metlog_data):
             self.client.metlog('services', fields=metlog_data)
 
-        with thread_context(send_logmsg):
+        with thread_context(send_logmsg) as metlog_data:
+            metlog_data['user_agent'] = str(getattr(req, 'user_agent', None))
             return self._fn(*args, **kwargs)
