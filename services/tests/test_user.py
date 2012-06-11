@@ -36,7 +36,6 @@
 #
 # ***** END LICENSE BLOCK *****
 import unittest
-import warnings
 import os
 
 from nose.plugins.skip import SkipTest
@@ -107,13 +106,9 @@ class TestUser(unittest.TestCase):
         self.assertEquals(mgr.authenticate_user(user1, credentials1), user1_id)
         self.assertEquals(mgr.authenticate_user(user2, credentials2), user2_id)
 
-        # Check that using a raw password works, but gives DeprecationWarning.
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("default")
-            self.assertEquals(mgr.authenticate_user(user1, "password1"),
-                              user1_id)
-            self.assertEquals(len(w), 1)
-            self.assertTrue("dict of credentials" in str(w[0].message))
+        # Check that using a raw password still works.
+        self.assertEquals(mgr.authenticate_user(user1, "password1"),
+                          user1_id)
 
         # Make sure that empty credentials doesn't do bad things.
         self.assertEquals(mgr.authenticate_user(user2, {}),
