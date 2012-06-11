@@ -107,8 +107,8 @@ class SyncServerApp(object):
             self.logger = self.modules.get('metlog_loader').default_client
         else:
             # there was no metlog config, default to using StdLibLoggingSender
-            sender = StdLibLoggingSender('syncstorage', json_types=[])
-            metlog = MetlogClient(sender, 'syncstorage')
+            sender = StdLibLoggingSender('syncserver', json_types=[])
+            metlog = MetlogClient(sender, 'syncserver')
             CLIENT_HOLDER.set_client(metlog.logger, metlog)
             self.logger = metlog
 
