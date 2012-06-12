@@ -40,7 +40,6 @@ import urlparse
 
 from services.util import BackendError, get_url
 from services.auth.ldapsql import LDAPAuth
-from services import logger
 from services.ldappool import StateConnector
 
 
@@ -82,7 +81,7 @@ class MozillaAuth(LDAPAuth):
         status, headers, body = get_url(url, method, data, headers)
 
         if not status == 200:
-            logger.error("got status %i from sreg (%s): %s" %
+            self.logger.error("got status %i from sreg (%s): %s" %
                                                 (status, url, body))
             raise BackendError()
 
@@ -90,7 +89,7 @@ class MozillaAuth(LDAPAuth):
             try:
                 return json.loads(body)
             except Exception:
-                logger.error("bad json body from sreg (%s): %s" %
+                self.logger.error("bad json body from sreg (%s): %s" %
                                                         (url, body))
                 return {}
         return {}

@@ -14,11 +14,11 @@
 # The Original Code is Sync Server
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
-# Portions created by the Initial Developer are Copyright (C) 2011
+# Portions created by the Initial Developer are Copyright (C) 2010
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Tarek Ziade (tarek@mozilla.com)
+#   Victor Ng (vng@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,52 +33,23 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-"""Tests for test.support
-"""
+import os.path
 import unittest
-import logging
-
-from services import logger
-from services.tests.support import capture_logs
+from services.metrics import MetlogLoader
 
 
-class TestSupport(unittest.TestCase):
+heredir = os.path.dirname(__file__)
+metlog_cfg_path = os.path.join(heredir, 'metlog_test.ini')
 
-    def setUp(self):
-        self.old = logger.level
-        self.disabled = logger.disabled
-        logger.disabled = 0
-        logger.setLevel(logging.DEBUG)
-        self.root = logging.getLogger()
-        self.root_level = self.root.level
-        self.root.setLevel(logging.DEBUG)
-        self.rhandlers = self.root.handlers[:]
-        self.root.handlers[:] = []
+helper_config = {
+    'config': metlog_cfg_path,
+}
 
-    def tearDown(self):
-        logger.setLevel(self.old)
-        logger.disabled = self.disabled
-        self.root.setLevel(self.root_level)
-        self.root.handlers[:] = self.rhandlers
 
-    def test_graberrors(self):
-        # simpler case: services logger, error level
-        with capture_logs() as errors:
-            logger.error('Yeah')
-
-        self.assertEqual(errors.read(), 'Yeah\n')
-
-        # services logger, warning level
-        with capture_logs(level=logging.WARNING) as wrn:
-            logger.debug('Yeah')
-            logger.warning('Yeah2')
-
-        self.assertEqual(wrn.read(), 'Yeah2\n')
-
-        # root logger, warning
-        root = logging.getLogger()
-        with capture_logs(logger='root', level=logging.WARNING) as wrn:
-            root.debug('Yeah')
-            root.warning('Yeah2')
-
-        self.assertEqual(wrn.read(), 'Yeah2\n')
+class TestMetlogPlugin(unittest.TestCase):
+    def test_creates_client(self):
+        holder = MetlogLoader(**helper_config)
+        self.assertFalse(holder.default_client is None)
+        sender = holder.default_client.sender
+        self.assertEqual(sender.__class__.__name__, 'DebugCaptureSender')
+        self.assertEqual(sender.bindstrs, ['foo', 'bar'])

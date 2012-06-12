@@ -4,6 +4,7 @@ lib
 include
 bin
 man
+build
 .channel
 Services.egg-info
 swp$
@@ -11,3 +12,5 @@ html
 doc/build
 \.coverage
 .git
+syntax: glob
+test

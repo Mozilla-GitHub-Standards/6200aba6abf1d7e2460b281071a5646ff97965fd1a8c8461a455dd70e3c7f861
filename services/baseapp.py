@@ -19,6 +19,7 @@
 #
 # Contributor(s):
 #   Tarek Ziade (tarek@mozilla.com)
+#   Rob Miller (rmiller@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,6 +43,11 @@ import sys
 import signal
 from time import sleep
 
+from metlog.client import MetlogClient
+from metlog.decorators.stats import incr_count, timeit
+from metlog.holder import CLIENT_HOLDER
+from metlog.senders.logging import StdLibLoggingSender
+
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
 
@@ -53,10 +59,10 @@ from webob import Response
 
 from services.util import (CatchErrorMiddleware, round_time, BackendError,
                            create_hash, HTTPJsonServiceUnavailable)
-from services import logger
 from services.config import Config
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
+from services.metrics import send_services_data
 from services.pluginreg import load_and_configure
 from services.user import User
 
@@ -88,9 +94,23 @@ class SyncServerApp(object):
         # check if we want to clean when the app ends
         self.sigclean = self.config.get('global.clean_shutdown', True)
 
+        # load the specified plugin modules
         self.modules = dict()
-        for module in self.config.get('app.modules', []):
+        app_modules = self.config.get('app.modules', [])
+        if isinstance(app_modules, basestring):
+            app_modules = [app_modules]
+        for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
+
+        if self.modules.get('metlog_loader') != None:
+            # stash the metlog client in a more convenient spot
+            self.logger = self.modules.get('metlog_loader').default_client
+        else:
+            # there was no metlog config, default to using StdLibLoggingSender
+            sender = StdLibLoggingSender('syncserver', json_types=[])
+            metlog = MetlogClient(sender, 'syncserver')
+            CLIENT_HOLDER.set_client(metlog.logger, metlog)
+            self.logger = metlog
 
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
@@ -114,6 +134,16 @@ class SyncServerApp(object):
             if isinstance(verbs, str):
                 verbs = [verbs]
 
+            # wrap action methods w/ metlog decorators
+            controller_instance = self.controllers.get(controller)
+            if controller_instance is not None:
+                wrapped_name = '_%s_wrapped' % action
+                method = getattr(controller_instance, action, None)
+                if ((method is not None) and
+                    (not hasattr(controller_instance, wrapped_name))):
+                    # add wrapped method
+                    wrapped = send_services_data(incr_count(timeit(method)))
+                    setattr(controller_instance, wrapped_name, wrapped)
             self.mapper.connect(None, match, controller=controller,
                                 action=action, conditions=dict(method=verbs),
                                 **extras)
@@ -308,8 +338,8 @@ class SyncServerApp(object):
             extra_info = '\n'.join(extra_info)
             error_log = '%s\n%s\n%s' % (err_info, err_trace, extra_info)
             hash = create_hash(error_log)
-            logger.error(hash)
-            logger.error(error_log)
+            self.logger.error(hash)
+            self.logger.error(error_log)
             msg = json.dumps("application error: crash id %s" % hash)
             if err.retry_after is not None:
                 if err.retry_after == 0:
@@ -345,7 +375,7 @@ class SyncServerApp(object):
             # if it's not str it's unicode, which really shouldn't happen
             module = getattr(function, '__module__', 'unknown')
             name = getattr(function, '__name__', 'unknown')
-            logger.warn('Unicode response returned from: %s - %s'
+            self.logger.warn('Unicode response returned from: %s - %s'
                         % (module, name))
             response.unicode_body = result
         return response
@@ -356,7 +386,11 @@ class SyncServerApp(object):
             controller = self.controllers[controller]
         except KeyError:
             return None
-        return getattr(controller, action, None)
+        wrapped_name = '_%s_wrapped' % action
+        fn = getattr(controller, wrapped_name, None)
+        if fn is None:
+            fn = getattr(controller, action, None)
+        return fn
 
 
 def set_app(urls, controllers, klass=SyncServerApp, auth_class=None,

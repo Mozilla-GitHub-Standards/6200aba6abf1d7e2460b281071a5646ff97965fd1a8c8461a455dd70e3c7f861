@@ -35,10 +35,10 @@
 # ***** END LICENSE BLOCK *****
 import unittest
 import base64
+import os.path
 import threading
 from time import sleep
 
-from services import logger
 from services.baseapp import SyncServerApp
 from services.util import BackendError
 from services.events import (subscribe, REQUEST_STARTS, REQUEST_ENDS,
@@ -83,6 +83,10 @@ class Mod2(object):
     pass
 
 
+heredir = os.path.dirname(__file__)
+metlog_cfg_path = os.path.join(heredir, 'metlog_test.ini')
+
+
 class TestBaseApp(unittest.TestCase):
 
     urls = [('POST', '/', 'foo', 'index'),
@@ -96,9 +100,11 @@ class TestBaseApp(unittest.TestCase):
     config = {'host:here.one.two': 1,
               'one.two': 2,
               'auth.backend': 'services.auth.dummy.DummyAuth',
-              'app.modules': ['mod1', 'mod2'],
+              'app.modules': ['mod1', 'mod2', 'metlog_loader'],
               'mod1.backend': 'services.tests.test_baseapp.Mod1',
               'mod2.backend': 'services.tests.test_baseapp.Mod2',
+              'metlog_loader.backend': 'services.metrics.MetlogLoader',
+              'metlog_loader.config': metlog_cfg_path,
               }
     auth_class = None
 
@@ -124,7 +130,11 @@ class TestBaseApp(unittest.TestCase):
 
     def test_retry_after(self):
         config = {'global.retry_after': 60,
-                  'auth.backend': 'services.auth.dummy.DummyAuth'}
+                  'auth.backend': 'services.auth.dummy.DummyAuth',
+                  'app.modules': ['metlog_loader'],
+                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
+                  'metlog_loader.config': metlog_cfg_path,
+                  }
         urls = [('GET', '/boom', 'foo', 'boom'),
                 ('GET', '/boom2', 'foo', 'boom2'),
                 ('GET', '/boom3', 'foo', 'boom3')]
@@ -152,6 +162,7 @@ class TestBaseApp(unittest.TestCase):
 
         # no retry-after (set to -1)
         request = make_request("/boom3", method="GET", host="localhost")
+        logger = app.logger
         old = logger.error
         errors = []
 
@@ -177,6 +188,9 @@ class TestBaseApp(unittest.TestCase):
 
         config = {'global.heartbeat_page': '__heartbeat__',
                   'global.debug_page': '__debug__',
+                  'app.modules': ['metlog_loader'],
+                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
+                  'metlog_loader.config': metlog_cfg_path,
                   'auth.backend': 'services.auth.dummy.DummyAuth'}
         urls = []
         controllers = {}

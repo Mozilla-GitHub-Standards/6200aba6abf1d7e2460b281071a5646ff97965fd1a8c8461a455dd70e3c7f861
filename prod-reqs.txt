@@ -13,3 +13,4 @@ SQLAlchemy == 0.6.6
 MySQL-python == 1.2.3
 WSGIProxy == 0.2.2
 recaptcha-client == 1.0.6
+metlog-py == 0.9.1

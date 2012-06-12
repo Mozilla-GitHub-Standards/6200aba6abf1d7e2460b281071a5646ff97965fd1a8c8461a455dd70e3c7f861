@@ -41,7 +41,6 @@ import urlparse
 from services.exceptions import BackendError
 from services.http_helpers import get_url
 from services.auth.ldapsql import LDAPAuth
-from services import logger
 from services.ldappool import StateConnector
 from services.auth import NoEmailError, InvalidCodeError
 from services.respcodes import ERROR_NO_EMAIL_ADDRESS, ERROR_INVALID_RESET_CODE

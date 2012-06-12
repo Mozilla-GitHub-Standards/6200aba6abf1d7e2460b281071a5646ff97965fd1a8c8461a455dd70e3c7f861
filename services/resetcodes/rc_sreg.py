@@ -39,12 +39,12 @@
 import urlparse
 import json
 
+from metlog.holder import CLIENT_HOLDER
 from services.exceptions import BackendError
 from services.http_helpers import get_url
 from services.auth import NoEmailError
 from services.resetcodes import ResetCode, NoUserIDError, AlreadySentError
 from services.respcodes import ERROR_NO_EMAIL_ADDRESS
-from services import logger
 
 
 class ResetCodeSreg(ResetCode):
@@ -56,6 +56,7 @@ class ResetCodeSreg(ResetCode):
         self.sreg_scheme = sreg_scheme
         self.sreg_path = sreg_path
         self.product = product
+        self.logger = CLIENT_HOLDER.default_client
 
     def generate_reset_code(self, user, overwrite=False):
         """Returns the a reset code for user.
@@ -119,6 +120,6 @@ class ResetCodeSreg(ResetCode):
             try:
                 body = json.loads(body)
             except Exception:
-                logger.error("bad json body from sreg (%s): %s" %
-                                                        (url, body))
+                self.logger.error("bad json body from sreg (%s): %s" %
+                                  (url, body))
         return status, body

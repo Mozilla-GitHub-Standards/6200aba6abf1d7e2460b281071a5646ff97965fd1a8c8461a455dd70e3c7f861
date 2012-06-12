@@ -45,8 +45,8 @@ from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy import String, DateTime
 from sqlalchemy.sql import bindparam, select, insert, delete
 
+from metlog.holder import CLIENT_HOLDER
 from services.util import safe_execute
-from services import logger
 from services.resetcodes import ResetCode
 
 
@@ -77,6 +77,7 @@ class ResetCodeManager(object):
             if create_tables:
                 reset_codes.create(checkfirst=True)
         self.rc = ResetCode()
+        self.logger = CLIENT_HOLDER.default_client
 
     #
     # Private methods
@@ -114,7 +115,7 @@ class ResetCodeManager(object):
         res = safe_execute(self._engine, query)
 
         if res.rowcount != 1:
-            logger.debug('Unable to add a new reset code in the'
+            self.logger.debug('Unable to add a new reset code in the'
                          ' reset_code table')
             return None  # XXX see if appropriate
 
