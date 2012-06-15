@@ -163,13 +163,17 @@ class Authentication(object):
             else:
                 user = User(user_name)
                 credentials = {"username": user_name, "password": password}
+                attrs = []
+                check_node = self.config.get('auth.check_node')
+                if check_node:
+                    attrs.append('syncNode')
                 user_id = self.backend.authenticate_user(user, credentials,
-                                                         ['syncNode'])
+                                                         attrs)
                 if not user_id:
                     user_id = None
                     user = None
                 else:
-                    if (self.config.get('auth.check_node')
+                    if (check_node
                         and user.get('syncNode') != environ.get('HTTP_HOST')):
                         user_id = None
                         user = None
