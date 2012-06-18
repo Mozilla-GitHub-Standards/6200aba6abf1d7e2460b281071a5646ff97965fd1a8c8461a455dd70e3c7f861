@@ -217,7 +217,11 @@ class Config(dict):
             raise ValueError('The configuration file was not found. "%s"' %
                              path)
         conf = SvcConfigParser(path)
-        self.update(conf.get_map())
+        here_path = os.path.dirname(path)
+        for key, value in conf.get_map().iteritems():
+            if isinstance(value, basestring):
+                value = value.replace("%(here)s", here_path)
+            self[key] = value
 
     def get_section(self, section):
         """
