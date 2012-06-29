@@ -100,6 +100,12 @@ class TestUser(unittest.TestCase):
                                           'test@moz.com'),
                           False)
 
+        # Make sure it can't create users if that's explicitly disabled.
+        mgr.allow_new_users = False
+        self.assertRaises(BackendError,
+                          mgr.create_user, 'user1', 'password1', 'bad@moz.com')
+        mgr.allow_new_users = True
+
         # Check it can successfully authenticate existing users.
         credentials1 = {"username": "user1", "password": "password1"}
         credentials2 = {"username": "user2", "password": u"pásswørd1"}

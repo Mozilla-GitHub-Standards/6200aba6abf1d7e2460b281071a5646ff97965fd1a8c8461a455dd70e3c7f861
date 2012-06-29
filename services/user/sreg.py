@@ -61,6 +61,9 @@ class SregUser(LDAPUser):
 
     def create_user(self, username, password, email):
         """Creates a user. Returns user on success, false otherwise."""
+        if not self.allow_new_users:
+            raise BackendError("Creation of new users is disabled")
+
         payload = {'password': password, 'email': email}
         url = self._generate_url(username)
         status, body = self._proxy('PUT', url, payload)

@@ -48,6 +48,7 @@ from sqlalchemy.pool import NullPool
 
 from services.util import (validate_password, ssha256, safe_execute)
 from services.user import User, _password_to_credentials
+from services.exceptions import BackendError
 
 _Base = declarative_base()
 tables = []
@@ -88,7 +89,7 @@ class SQLUser(object):
 
     def __init__(self, sqluri=_SQLURI, pool_size=20, pool_recycle=60,
                  check_account_state=True, create_tables=True, no_pool=False,
-                 **kw):
+                 allow_new_users=True, **kw):
         sqlkw = {'logging_name': 'weaveserver'}
         if sqluri.startswith('sqlite'):
             sqlkw['listeners'] = [SetTextFactory()]
@@ -102,6 +103,7 @@ class SQLUser(object):
             sqlkw['poolclass'] = NullPool
 
         self.check_account_state = check_account_state
+        self.allow_new_users = allow_new_users
         self._engine = create_engine(sqluri, **sqlkw)
         users.metadata.bind = self._engine
         if create_tables:
@@ -127,6 +129,9 @@ class SQLUser(object):
 
     def create_user(self, username, password, email):
         """Creates a user. Returns True on success."""
+        if not self.allow_new_users:
+            raise BackendError("Creation of new users is disabled")
+
         password_hash = ssha256(password)
         query = insert(users).values(username=username, mail=email,
                                      password=password_hash,

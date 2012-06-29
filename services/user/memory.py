@@ -38,6 +38,7 @@
 """
 import random
 from services.user import User, _password_to_credentials
+from services.exceptions import BackendError
 
 
 class MemoryUser(object):
@@ -46,7 +47,8 @@ class MemoryUser(object):
     Will store the user ids in memory.
     """
 
-    def __init__(self, **kw):
+    def __init__(self, allow_new_users=True, **kw):
+        self.allow_new_users = allow_new_users
         self._users = {}
 
     def get_user_id(self, user):
@@ -66,6 +68,9 @@ class MemoryUser(object):
 
     def create_user(self, user_name, password, email):
         """Creates a user"""
+        if not self.allow_new_users:
+            raise BackendError("Creation of new users is disabled")
+
         user = User()
         if user_name in self._users:
             return False

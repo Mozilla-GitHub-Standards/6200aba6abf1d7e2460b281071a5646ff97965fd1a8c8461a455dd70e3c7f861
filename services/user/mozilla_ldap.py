@@ -50,9 +50,10 @@ from services.ldappool import ConnectionManager
 class LDAPUser(object):
     """LDAP authentication."""
 
-    def __init__(self, ldapuri, users_root='ou=users,dc=mozilla',
-                 check_account_state=True,
+    def __init__(self, ldapuri, allow_new_users=True,
+                 users_root='ou=users,dc=mozilla', check_account_state=True,
                  ldap_timeout=10, search_root='dc=mozilla', **kw):
+        self.allow_new_users = allow_new_users
         self.check_account_state = check_account_state
         self.users_root = users_root
         self.search_root = search_root
@@ -77,6 +78,9 @@ class LDAPUser(object):
 
     def create_user(self, user_name, password, email):
         """Creates a user. Returns a user object on success."""
+        if not self.allow_new_users:
+            raise BackendError("Creation of new users is disabled")
+
         # no unicode
         user_name = user_name.encode('utf8')
         password = password.encode('utf8')
