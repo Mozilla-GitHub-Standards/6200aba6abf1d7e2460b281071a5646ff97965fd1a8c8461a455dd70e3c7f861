@@ -40,6 +40,7 @@ server-core plugin to set up metlog.
 from contextlib import contextmanager
 from metlog.config import client_from_stream_config
 from metlog.decorators.base import MetlogDecorator
+from metlog.decorators.stats import timeit
 from metlog.holder import CLIENT_HOLDER
 import threading
 
@@ -96,5 +97,20 @@ class send_services_data(MetlogDecorator):
             self.client.metlog('services', fields=metlog_data)
 
         with thread_context(send_logmsg) as metlog_data:
-            metlog_data['user_agent'] = str(getattr(req, 'user_agent', None))
+            metlog_data['userid'] = req.user['userid']
             return self._fn(*args, **kwargs)
+
+
+class svc_timeit(timeit):
+    """
+    Record timer value in services data.
+    """
+    def metlog_call(self, *args, **kwargs):
+        if self.args is None:
+            self.args = tuple()
+        if self.kwargs is None:
+            self.kwargs = {'name': self._fn_fq_name}
+        with self.client.timer(*self.args, **self.kwargs) as timer:
+            result = self._fn(*args, **kwargs)
+        update_metlog_data({'req_time': timer.result})
+        return result

@@ -44,7 +44,7 @@ import signal
 from time import sleep
 
 from metlog.client import MetlogClient
-from metlog.decorators.stats import incr_count, timeit
+from metlog.decorators.stats import incr_count
 from metlog.holder import CLIENT_HOLDER
 from metlog.senders.logging import StdLibLoggingSender
 
@@ -62,7 +62,7 @@ from services.util import (CatchErrorMiddleware, round_time, BackendError,
 from services.config import Config
 from services.controllers import StandardController
 from services.events import REQUEST_STARTS, REQUEST_ENDS, APP_ENDS, notify
-from services.metrics import send_services_data
+from services.metrics import send_services_data, svc_timeit
 from services.pluginreg import load_and_configure
 from services.user import User
 
@@ -142,7 +142,9 @@ class SyncServerApp(object):
                 if ((method is not None) and
                     (not hasattr(controller_instance, wrapped_name))):
                     # add wrapped method
-                    wrapped = send_services_data(incr_count(timeit(method)))
+                    wrapped = svc_timeit(method)
+                    wrapped = incr_count(wrapped)
+                    wrapped = send_services_data(wrapped)
                     setattr(controller_instance, wrapped_name, wrapped)
             self.mapper.connect(None, match, controller=controller,
                                 action=action, conditions=dict(method=verbs),
