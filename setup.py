@@ -37,7 +37,7 @@ import os
 import re
 from setuptools import setup, find_packages
 
-install_requires = ['SQLALchemy<=0.6.99', 'Paste', 'PasteDeploy', 'WebOb',
+install_requires = ['SQLAlchemy', 'Paste', 'PasteDeploy', 'WebOb',
                     'Routes', 'simplejson', 'cef', 'wsgiproxy', 'metlog-py']
 
 
