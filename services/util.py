@@ -37,6 +37,7 @@
 """
 Various utilities
 """
+import sys
 import traceback
 import random
 import string
@@ -301,7 +302,22 @@ class CatchErrorMiddleware(object):
         try:
             return self.app(environ, start_response)
         except:
-            err = traceback.format_exc()
+            # We don't want to write arbitrary user-provided data into the
+            # the logfiles.  For example, the sort of data that might show
+            # up in the payload of a ValueError exception.
+            # Format the traceback using standard printing, but use repr()
+            # on the exception value itself to avoid this issue.
+            exc_type, exc_val, exc_tb = sys.exc_info()
+            lines = ["Uncaught exception while processing request:\n"]
+            req_method = environ.get("REQUEST_METHOD", "")
+            req_path = environ.get("SCRIPT_NAME", "")
+            req_path += environ.get("PATH_INFO", "")
+            lines.append("%s %s\n" % (req_method, req_path))
+            lines.extend(traceback.format_tb(exc_tb))
+            lines.append("%r\n" % (exc_type,))
+            lines.append("%r\n" % (exc_val,))
+            err = "".join(lines)
+            # Log it, then send a crash id back to the client.
             hash = create_hash(err)
             self.logger.error(hash)
             self.logger.error(err)
