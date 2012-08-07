@@ -59,6 +59,8 @@ class LDAPUser(object):
         self.search_root = search_root
         self.ldap_timeout = ldap_timeout
         self.logger = CLIENT_HOLDER.default_client
+
+        kw.pop("check_node", None)
         self.conn = ConnectionManager(ldapuri, **kw)
 
     def _conn(self, bind=None, passwd=None):
