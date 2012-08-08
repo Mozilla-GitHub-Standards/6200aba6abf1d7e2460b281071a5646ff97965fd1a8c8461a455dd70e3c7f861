@@ -256,6 +256,10 @@ class TestBaseApp(unittest.TestCase):
         request = make_request("/missing")
         self.assertRaises(HTTPNotFound, self.app, request)
 
+    def test_methodnotallowed(self):
+        request = make_request("/", method="OST")
+        self.assertEquals(self.app(request).status, "405 Method Not Allowed")
+
     def test_events(self):
 
         pings = []

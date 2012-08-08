@@ -53,9 +53,10 @@ from paste.exceptions.errormiddleware import ErrorMiddleware
 
 from routes import Mapper
 
-from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPServiceUnavailable, HTTPException
 from webob import Response
+from webob.dec import wsgify
+from webob.exc import (HTTPNotFound, HTTPServiceUnavailable,
+                       HTTPException, HTTPMethodNotAllowed)
 
 from services.util import (CatchErrorMiddleware, round_time, BackendError,
                            create_hash, HTTPJsonServiceUnavailable)
@@ -292,7 +293,13 @@ class SyncServerApp(object):
         match = self.mapper.routematch(environ=request.environ)
 
         if match is None:
-            return HTTPNotFound()
+            # Check whether there is a match on just the path.
+            # If not then it's a 404; if so then it's a 405.
+            match = self.mapper.routematch(url=request.path_info)
+            if match is None:
+                return HTTPNotFound()
+            else:
+                return HTTPMethodNotAllowed()
 
         match, __ = match
 
