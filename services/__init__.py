@@ -33,3 +33,8 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
+
+import sys
+
+if "gevent" in sys.modules:
+    import services.gevent_helper
