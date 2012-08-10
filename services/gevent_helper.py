@@ -44,6 +44,8 @@ and if it exceeds a configured threshold then an error log is generated.
 import os
 import time
 import traceback
+import contextlib
+
 import greenlet
 import gevent.hub
 
@@ -72,8 +74,6 @@ def switch_time_tracer(what, (origin, target)):
         if blocking_time > MAX_BLOCKING_TIME:
             err_log = "Greenlet blocked the eventloop for %.4f seconds\n"
             err_log = err_log % (blocking_time, )
-            if origin.gr_frame:
-                err_log += "".join(traceback.format_stack(origin.gr_frame))
             CLIENT_HOLDER.default_client.error(err_log)
 
 
@@ -81,3 +81,27 @@ def switch_time_tracer(what, (origin, target)):
 # This can be disabled by setting the environment variable to zero.
 if hasattr(greenlet, "settrace") and MAX_BLOCKING_TIME > 0:
     greenlet.settrace(switch_time_tracer)
+
+
+# The trace function can detect blocking, but only once the code eventually
+# yields back to gevent.  This will almost certainly be at some other unrelated
+# point in the code, giving no clues as to what code was actually at fault.
+# To narrow the blocking down to some specific chunk of code, use this
+# context manager.  If execution within this context does not yield to gevent
+# then an error will be logged, including a traceback.
+@contextlib.contextmanager
+def check_for_gevent_blocking(name=""):
+    old_switch_time = _last_switch_time
+    start_time = time.time()
+    yield None
+    end_time = time.time()
+    if old_switch_time is not None and old_switch_time == _last_switch_time:
+        blocking_time = end_time - start_time
+        if name:
+            err_log = "Code %r did not yield to gevent for %.4f seconds"
+            err_log = err_log % (name, blocking_time, )
+        else:
+            err_log = "Code did not yield to gevent for %.4f seconds"
+            err_log = err_log % (blocking_time, )
+        err_log += "".join(traceback.format_stack())
+        CLIENT_HOLDER.default_client.error(err_log)
