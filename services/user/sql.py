@@ -39,14 +39,15 @@
 Users are stored with digest password (ssha256)
 """
 
-from sqlalchemy import create_engine, Integer, String
+from sqlalchemy import Integer, String
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 
-from services.util import (validate_password, ssha256, safe_execute)
+from services.util import (validate_password, ssha256,
+                           safe_execute, create_engine)
 from services.user import User, _password_to_credentials
 from services.exceptions import BackendError
 

@@ -43,10 +43,10 @@ The storage can be overriden.
 import datetime
 
 from sqlalchemy.ext.declarative import declarative_base, Column
-from sqlalchemy import String, DateTime, create_engine
+from sqlalchemy import String, DateTime
 from sqlalchemy.sql import bindparam, select, insert, delete, and_
 
-from services.util import safe_execute
+from services.util import safe_execute, create_engine
 from services.resetcodes import ResetCode
 from services.exceptions import BackendError
 

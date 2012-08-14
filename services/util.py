@@ -56,6 +56,7 @@ import warnings
 from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
+import sqlalchemy
 from sqlalchemy.exc import DBAPIError, OperationalError, TimeoutError
 
 from metlog.holder import CLIENT_HOLDER
@@ -339,6 +340,20 @@ class CatchErrorMiddleware(object):
                     pass
 
             return [response]
+
+
+def create_engine(*args, **kwds):
+    """Wrapper for sqlalchemy.create_engine with some extra security measures.
+
+    This function wraps a call to sqlalchemy.create_engine with logic to
+    restrict the process umask.  This ensures that sqlite database files are
+    created with secure permissions by default. 
+    """
+    old_umask = os.umask(0077)
+    try:
+        return sqlalchemy.create_engine(*args, **kwds)
+    finally:
+        os.umask(old_umask)
 
 
 def safe_execute(engine, *args, **kwargs):

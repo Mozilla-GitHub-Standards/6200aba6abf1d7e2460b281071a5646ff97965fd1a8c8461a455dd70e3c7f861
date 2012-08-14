@@ -42,12 +42,11 @@ import random
 import ldap
 
 from sqlalchemy.ext.declarative import declarative_base, Column
-from sqlalchemy import Integer, String
-from sqlalchemy import create_engine, SmallInteger
+from sqlalchemy import Integer, String, SmallInteger
 from sqlalchemy.sql import select, insert, update, and_
 
 from metlog.holder import CLIENT_HOLDER
-from services.util import BackendError, ssha
+from services.util import BackendError, ssha, create_engine
 from services.auth import NodeAttributionError
 from services.ldappool import ConnectionManager, StateConnector
 from services.auth.resetcode import ResetCodeManager
