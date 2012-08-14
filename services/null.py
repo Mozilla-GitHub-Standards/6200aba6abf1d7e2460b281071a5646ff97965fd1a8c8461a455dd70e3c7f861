@@ -1,4 +1,5 @@
 
+
 class NullObject(object):
     """
     Null Object used when the logging client is completely disabled
@@ -57,4 +58,3 @@ class NullObject(object):
 
     def next(self):
         raise StopIteration
-

@@ -37,4 +37,4 @@
 import sys
 
 if "gevent" in sys.modules:
-    import services.gevent_helper
+    import services.gevent_helper  # NOQA

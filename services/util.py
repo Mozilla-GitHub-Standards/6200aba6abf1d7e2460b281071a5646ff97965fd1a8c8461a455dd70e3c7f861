@@ -347,7 +347,7 @@ def create_engine(*args, **kwds):
 
     This function wraps a call to sqlalchemy.create_engine with logic to
     restrict the process umask.  This ensures that sqlite database files are
-    created with secure permissions by default. 
+    created with secure permissions by default.
     """
     old_umask = os.umask(0077)
     try:

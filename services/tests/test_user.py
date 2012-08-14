@@ -312,6 +312,7 @@ class TestUser(unittest.TestCase):
         tarek = User('tarek')
         credentials = {"username": "tarek", "password": "pass"}
 
+        res = None
         with mock_wsgi(_kill):
             try:
                 mgr.delete_user(tarek, credentials)
@@ -325,6 +326,7 @@ class TestUser(unittest.TestCase):
                   ' 503')
         self.assertEqual(res, wanted)
 
+        res = None
         with mock_wsgi(_kill):
             try:
                 mgr.create_user('tarek', 'pass', 'mail')
@@ -339,6 +341,7 @@ class TestUser(unittest.TestCase):
 
         self.assertEqual(res, wanted)
 
+        res = None
         with mock_wsgi(_kill):
             try:
                 mgr.admin_update_password(tarek, 'pass', 'key')

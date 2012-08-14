@@ -103,7 +103,7 @@ class SyncServerApp(object):
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
-        if self.modules.get('metlog_loader') != None:
+        if self.modules.get('metlog_loader') is not None:
             # stash the metlog client in a more convenient spot
             self.logger = self.modules.get('metlog_loader').default_client
         else:
