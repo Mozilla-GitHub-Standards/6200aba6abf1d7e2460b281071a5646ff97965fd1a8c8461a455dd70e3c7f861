@@ -43,7 +43,7 @@ from sqlalchemy.pool import NullPool
 from services.tests.support import initenv
 from services.auth.sql import SQLAuth
 from services.auth import ServicesAuth
-from services.util import ssha, BackendError
+from services.util import ssha, BackendError, safe_execute
 
 ServicesAuth.register(SQLAuth)
 
@@ -53,21 +53,25 @@ class TestSQLAuth(unittest.TestCase):
     def setUp(self):
         self.appdir, self.config, self.auth = initenv()
         # we don't support other storages for this test
-        assert self.auth.sqluri.split(':/')[0] in ('mysql', 'sqlite')
+        driver = self.auth.sqluri.split(':/')[0]
+        assert driver in ('mysql', 'pymysql', 'sqlite')
 
         # lets add a user tarek/tarek
         password = ssha('tarek')
         query = text('insert into users (username, password_hash, status) '
                      'values (:username, :password, 1)')
-        self.auth._engine.execute(query, username='tarek', password=password)
-        self.user_id = self.auth._engine.execute('select id from users where'
+        self._safe_execute(query, username='tarek', password=password)
+        self.user_id = self._safe_execute('select id from users where'
                                             ' username="tarek"').fetchone().id
 
     def tearDown(self):
-        self.auth._engine.execute('delete from users')
+        self._safe_execute('delete from users')
         sqlfile = self.auth.sqluri.split('sqlite:///')[-1]
         if os.path.exists(sqlfile):
             os.remove(sqlfile)
+
+    def _safe_execute(self, *args, **kwds):
+        return safe_execute(self.auth._engine, *args, **kwds)
 
     def test_authenticate_user(self):
         if not isinstance(self.auth, SQLAuth):
@@ -101,7 +105,7 @@ class TestSQLAuth(unittest.TestCase):
 
         query = ('update users set reset_expiration = :expiration '
                  'where id = %d' % self.user_id)
-        self.auth._engine.execute(text(query), expiration=expiration)
+        self._safe_execute(text(query), expiration=expiration)
         self.assertFalse(self.auth.verify_reset_code(self.user_id, code))
 
     def test_status(self):
@@ -109,7 +113,7 @@ class TestSQLAuth(unittest.TestCase):
             # not supported yet
             return
         # people with status '0' are disabled
-        self.auth._engine.execute('update users set status=0')
+        self._safe_execute('update users set status=0')
         self.assertEquals(self.auth.authenticate_user('tarek', 'tarek'), None)
 
     def test_no_create(self):

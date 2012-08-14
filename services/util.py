@@ -367,15 +367,54 @@ def safe_execute(engine, *args, **kwargs):
         try:
             return engine.execute(*args, **kwargs)
         except DBAPIError, exc:
-            if exc.connection_invalidated:
+            if _is_retryable_db_error(engine, exc):
                 return engine.execute(*args, **kwargs)
             else:
                 raise
-    except (OperationalError, TimeoutError), exc:
+    except Exception, exc:
+        if not _is_operational_db_error(engine, exc):
+            raise
         err = traceback.format_exc()
         logger = CLIENT_HOLDER.default_client
         logger.error(err)
         raise BackendError(str(exc))
+
+
+def _is_retryable_db_error(engine, exc):
+    """Check whether we can safely retry in response to the given db error."""
+    # Any connection-related errors can be safely retried.
+    if exc.connection_invalidated:
+        return True
+    # Try to get the MySQL error number.
+    # Unfortunately this requires use of a private API.
+    # The try-except will also catch cases where we're not running MySQL.
+    try:
+        mysql_error_code = engine.dialect._extract_error_code(exc.orig)
+    except AttributeError:
+        pass
+    else:
+        # MySQL Lock Wait Timeout errors can be safely retried.
+        if mysql_error_code == 1205:
+            return True
+    # Any other error is assumed not to be retryable.  Better safe than sorry.
+    return False
+
+
+def _is_operational_db_error(engine, exc):
+    """Check whether the given error is an operations-related db error.
+
+    An operations-related error is loosely defined as something caused by
+    the operational environment, e.g. the database being overloaded or
+    unreachable.  It doesn't represent a bug in the code.
+    """
+    # All OperationalError or TimeoutError instances are operational.
+    if isinstance(exc, (OperationalError, TimeoutError)):
+        return True
+    # Any retryable error is operational.
+    if isinstance(exc, DBAPIError) and _is_retryable_db_error(engine, exc):
+        return True
+    # Everything else counts as a programming error.
+    return False
 
 
 def get_source_ip(environ):
