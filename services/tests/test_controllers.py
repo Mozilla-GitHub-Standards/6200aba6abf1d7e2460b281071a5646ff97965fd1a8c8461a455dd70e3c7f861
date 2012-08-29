@@ -44,7 +44,7 @@ _ENVIRON = {'HTTP_COOKIE': 'somecookie', 'SCRIPT_NAME': '',
             {'cef.vendor': 'mozilla',
              'cef.device_version': '1.3',
              'smtp.port': 25, 'auth.sqluri':
-             'mysql://xxxx:xxxx@localhost/sync',
+             'pymysql://xxxx:xxxx@localhost/sync',
              'storage.quota_size': 5120,
              'captcha.use': False,
              'storage.pool_size': 100,
@@ -55,7 +55,7 @@ _ENVIRON = {'HTTP_COOKIE': 'somecookie', 'SCRIPT_NAME': '',
              'storage.standard_collections': True,
              'cef.product': 'weave',
              'storage.cache_servers': 'localhost:11211',
-             'storage.sqluri': 'mysql://xxxx:xxxx@localhost/sync',
+             'storage.sqluri': 'pymysql://xxxx:xxxx@localhost/sync',
              'cef.use': True,
              'smtp.sender': 'weave@mozilla.com',
              'cef.version': 0,
@@ -116,7 +116,7 @@ class TestStandardController(unittest.TestCase):
         controller = StandardController(None)
 
         def _more_secret(*args):
-            return ['stuff', 'and', 'mysql://xxxx:xxxx@localhost/sync']
+            return ['stuff', 'and', 'pymysql://xxxx:xxxx@localhost/sync']
 
         controller._debug_server = _more_secret
         debug = controller._debug(req)

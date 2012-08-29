@@ -38,6 +38,7 @@
 """
 from hashlib import sha1
 import random
+import urlparse
 
 import ldap
 
@@ -118,7 +119,8 @@ class LDAPAuth(ResetCodeManager):
                  'logging_name': 'weaveserver'}
 
         if self.sqluri is not None:
-            if self.sqluri.startswith('mysql'):
+            driver = urlparse.urlparse(self.sqluri).scheme.lower()
+            if "mysql" in driver:
                 sqlkw['reset_on_return'] = reset_on_return
             engine = create_engine(sqluri, **sqlkw)
             for table in tables:

@@ -95,7 +95,7 @@ class StandardController(object):
         It is disabled by default.
         """
         res = _DEBUG_TMPL
-        sqluri = '(?P<scheme>mysql|sqlite)://(?P<login>.*?:.*)@(?P<url>.*)'
+        sqluri = '(?P<scheme>pymysql|sqlite)://(?P<login>.*?:.*)@(?P<url>.*)'
         sqluri = re.compile(sqluri)
         replacer = '\g<scheme>://****:****@\g<url>'
 

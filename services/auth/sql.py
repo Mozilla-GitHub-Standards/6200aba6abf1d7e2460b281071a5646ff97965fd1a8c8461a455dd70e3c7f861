@@ -38,6 +38,7 @@
 Users are stored with digest password (ssha256)
 """
 import datetime
+import urlparse
 
 from sqlalchemy import create_engine
 from sqlalchemy.interfaces import PoolListener
@@ -52,7 +53,7 @@ from services.resetcodes import ResetCode
 # sharing the same table than the sql storage
 from services.auth.sqlmappers import users
 
-_SQLURI = 'mysql://sync:sync@localhost/sync'
+_SQLURI = 'pymysql://sync:sync@localhost/sync'
 
 _USER_ID = select([users.c.id], users.c.username == bindparam('user_name'))
 
@@ -91,7 +92,8 @@ class SQLAuth(ResetCodeManager):
             if not no_pool:
                 sqlkw['pool_size'] = int(pool_size)
                 sqlkw['pool_recycle'] = int(pool_recycle)
-            if sqluri.startswith('mysql'):
+            driver = urlparse.urlparse(self.sqluri).scheme.lower()
+            if "mysql" in driver:
                 sqlkw['reset_on_return'] = False
         if no_pool or sqluri.startswith('sqlite'):
             sqlkw['poolclass'] = NullPool
