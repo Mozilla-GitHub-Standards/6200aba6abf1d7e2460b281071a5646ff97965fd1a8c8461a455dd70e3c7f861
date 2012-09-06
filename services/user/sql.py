@@ -137,7 +137,7 @@ class SQLUser(object):
         query = insert(users).values(username=username, mail=email,
                                      password=password_hash,
                                      accountStatus=1,
-                                     primaryNode='')
+                                     syncNode='')
         try:
             res = safe_execute(self._engine, query)
         except IntegrityError:
