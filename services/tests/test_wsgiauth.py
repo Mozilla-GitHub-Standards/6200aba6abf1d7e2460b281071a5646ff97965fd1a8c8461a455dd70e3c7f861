@@ -45,7 +45,7 @@ from services.config import Config
 from services.wsgiauth import Authentication
 from services.auth.dummy import DummyAuth
 from services.user.memory import MemoryUser
-from services.tests.support import make_request
+from services.tests.support import make_request, initenv
 
 
 class BadPasswordAuthTool(DummyAuth):
@@ -134,6 +134,7 @@ class AuthAPITestCases(object):
     def setUp(self):
         #  Check that we're not running from the base class.
         assert self.auth_class is not None
+        initenv()
 
     def test_check_method(self):
         config = self.make_config()

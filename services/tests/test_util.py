@@ -48,6 +48,7 @@ from services.util import (function_moved, bigint2time, time2bigint,
                            ssha256, valid_password, get_source_ip,
                            CatchErrorMiddleware, round_time)
 from services.exceptions import BackendError
+from services.tests.support import initenv
 
 
 def return2():
@@ -72,6 +73,7 @@ class FakeResult(object):
 class TestUtil(unittest.TestCase):
 
     def setUp(self):
+        initenv()
         self.oldopen = urllib2.urlopen
         urllib2.urlopen = self._urlopen
 

@@ -46,7 +46,8 @@ except:
     implements = lambda x: None  # NOQA
     IAuthenticator = None        # NOQA
 
-from cef import log_cef, AUTH_FAILURE
+from metlog.holder import CLIENT_HOLDER
+from metlog_cef import AUTH_FAILURE
 
 from services.user import User, extract_username
 
@@ -64,6 +65,7 @@ class BackendAuthPlugin(object):
     def __init__(self, config=None, backend=None):
         self.config = config
         self.backend = backend
+        self.logger = CLIENT_HOLDER.default_client
 
     def authenticate(self, environ, identity):
         # Normalize the username for our backend.
@@ -94,8 +96,8 @@ class BackendAuthPlugin(object):
             err_username = username
             if username != orig_username:
                 err_username += ' (%s)' % (orig_username,)
-            log_cef('User Authentication Failed', 5, environ, self.config,
-                    err_username, AUTH_FAILURE)
+            self.logger.cef('User Authentication Failed', 5,
+                            environ, self.config, err_username, AUTH_FAILURE)
             return None
 
         # Success!  Store any loaded attributes into the identity dict.

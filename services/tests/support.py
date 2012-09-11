@@ -42,6 +42,12 @@ import contextlib
 
 from webob import Request
 
+from metlog.holder import CLIENT_HOLDER
+from metlog.senders.dev import DebugCaptureSender
+from metlog.client import MetlogClient
+
+import metlog_cef.cef_plugin
+
 from services.config import Config
 from services.pluginreg import load_and_configure
 
@@ -99,6 +105,18 @@ class TestEnv(object):
 
         # loading loggers
         self.config = self.convert_config(ini_cfg, ini_path)
+
+        # Ensure that metlog is available, either from the config
+        # or by setting up a default client.
+        try:
+            loader = load_and_configure(self.config, "metlog_loader")
+            client = loader.default_client
+        except KeyError:
+            sender = DebugCaptureSender()
+            client = MetlogClient(sender, "syncserver")
+        CLIENT_HOLDER.set_client(client.logger, client)
+        if not hasattr(client, "cef"):
+            client.add_method(metlog_cef.cef_plugin.log_cef)
 
         if load_sections is not None:
             for section in load_sections:

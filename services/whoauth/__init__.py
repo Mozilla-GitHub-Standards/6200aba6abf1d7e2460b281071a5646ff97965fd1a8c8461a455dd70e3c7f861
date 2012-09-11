@@ -39,7 +39,6 @@ Authentication class based on repoze.who
 """
 
 from webob.exc import HTTPUnauthorized
-from cef import log_cef, AUTH_FAILURE
 
 try:
     from repoze.who.api import APIFactory
@@ -48,6 +47,9 @@ try:
 except ImportError:
     # Failing at import time is bad for test importer
     HAVE_REPOZE_WHO = False
+
+from metlog.holder import CLIENT_HOLDER
+from metlog_cef import AUTH_FAILURE
 
 from services.pluginreg import load_and_configure
 from services.user import User
@@ -94,6 +96,7 @@ class WhoAuthentication(object):
             self.backend = load_and_configure(self.config, 'auth')
         except KeyError:
             self.backend = None
+        self.logger = CLIENT_HOLDER.default_client
         # Extract who-related settings from the config or from our defaults.
         # the configured authentication backend.
         who_settings = self._get_who_settings(self.config)
@@ -150,7 +153,7 @@ class WhoAuthentication(object):
             if username is not None:
                 cef_kwds["username"] = username
             err = "Username Does Not Match URL"
-            log_cef(err, 7, request.environ, self.config, **cef_kwds)
+            self.logger.cef(err, 7, request.environ, self.config, **cef_kwds)
             self._raise_challenge(request)
 
         # Adjust environ to record the successful auth.

@@ -48,6 +48,8 @@ from metlog.decorators.stats import incr_count
 from metlog.holder import CLIENT_HOLDER
 from metlog.senders.logging import StdLibLoggingSender
 
+import metlog_cef.cef_plugin
+
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
 
@@ -112,6 +114,8 @@ class SyncServerApp(object):
             metlog = MetlogClient(sender, 'syncserver')
             CLIENT_HOLDER.set_client(metlog.logger, metlog)
             self.logger = metlog
+        if not hasattr(self.logger, "cef"):
+            self.logger.add_method(metlog_cef.cef_plugin.log_cef)
 
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool

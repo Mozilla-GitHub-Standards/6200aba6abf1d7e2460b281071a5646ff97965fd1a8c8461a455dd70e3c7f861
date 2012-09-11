@@ -40,7 +40,9 @@ import binascii
 import base64
 
 from webob.exc import HTTPUnauthorized, HTTPBadRequest
-from cef import log_cef, AUTH_FAILURE
+
+from metlog.holder import CLIENT_HOLDER
+from metlog_cef import AUTH_FAILURE
 
 from services.pluginreg import load_and_configure
 from services.user import User, extract_username
@@ -67,6 +69,7 @@ class Authentication(object):
     def __init__(self, config):
         self.config = config
         self.backend = load_and_configure(self.config, 'auth')
+        self.logger = CLIENT_HOLDER.default_client
 
     def check(self, request, match):
         """Checks if the current request/match can be viewed.
@@ -127,8 +130,8 @@ class Authentication(object):
 
             # let's reject the call if the url is not owned by the user
             if (username is not None and user_name != username):
-                log_cef('Username Does Not Match URL', 7, environ, config,
-                        user_name, AUTH_FAILURE)
+                self.logger.cef('Username Does Not Match URL', 7,
+                                environ, config, user_name, AUTH_FAILURE)
                 raise HTTPUnauthorized()
 
             # if this is an email, hash it. Save the original for logging and
@@ -185,8 +188,8 @@ class Authentication(object):
                 if remote_user_original is not None and \
                     user_name != remote_user_original:
                         err_user += ' (%s)' % (remote_user_original)
-                log_cef('User Authentication Failed', 5, environ, config,
-                        err_user, AUTH_FAILURE)
+                self.logger.cef('User Authentication Failed', 5,
+                                environ, config, err_user, AUTH_FAILURE)
                 raise HTTPUnauthorized()
 
             # we're all clear ! setting up REMOTE_USER

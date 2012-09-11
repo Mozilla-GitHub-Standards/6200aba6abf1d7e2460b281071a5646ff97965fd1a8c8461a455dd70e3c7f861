@@ -14,5 +14,5 @@ PyMySQL == 0.5
 pymysql_sa == 1.0
 WSGIProxy == 0.2.2
 recaptcha-client == 1.0.6
-metlog-py == 0.9.4
+metlog-py == 0.9.5
 metlog-cef == 0.1
