@@ -50,21 +50,25 @@ from services.tests.support import CAN_MOCK_WSGI, mock_wsgi
 from services.exceptions import BackendError
 
 
-memory_config = {'backend': 'services.user.memory.MemoryUser'}
+memory_config = {'backend': 'services.user.memory.MemoryUser',
+                 'check_node': True}
 sql_config = {'backend': 'services.user.sql.SQLUser',
-              'sqluri': 'sqlite:////tmp/test.db'}
+              'sqluri': 'sqlite:////tmp/test.db',
+              'check_node': True}
 ldap_config = {'backend': 'services.user.mozilla_ldap.LDAPUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
                'passwd': 'secret',
-               'additional': 'foo'}
+               'additional': 'foo',
+               'check_node': True}
 sreg_config = {'backend': 'services.user.sreg.SregUser',
                'ldapuri': 'ldap://localhost',
                'bind': 'uid=admin,dc=mozilla',
                'passwd': 'secret',
                'sreg_location': 'localhost',
                'sreg_path': '',
-               'sreg_scheme': 'http'}
+               'sreg_scheme': 'http',
+               'check_node': True}
 
 
 class Request(object):
