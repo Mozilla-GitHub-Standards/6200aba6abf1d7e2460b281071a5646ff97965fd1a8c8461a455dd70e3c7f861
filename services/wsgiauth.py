@@ -71,6 +71,14 @@ class Authentication(object):
         self.backend = load_and_configure(self.config, 'auth')
         self.logger = CLIENT_HOLDER.default_client
 
+    def _log_cef(self, name, severity, environ, config=None,
+                 username='none', signature=AUTH_FAILURE, **kw):
+        """Log a CEF error message, with some useful defaults."""
+        if config is None:
+            config = self.config
+        return self.logger.cef(name, severity, environ, config,
+                               username, signature, **kw)
+
     def check(self, request, match):
         """Checks if the current request/match can be viewed.
 
@@ -83,6 +91,8 @@ class Authentication(object):
         user_id = self.authenticate_user(request, self.config,
                                          match.get('username'))
         if user_id is None:
+            self._log_cef('No Authorization header was provided',
+                          7, request.environ)
             headers = [('WWW-Authenticate', 'Basic realm="Sync"'),
                        ('Content-Type', 'text/plain')]
             raise HTTPUnauthorized(headerlist=headers)
@@ -118,6 +128,8 @@ class Authentication(object):
             # for now, only supporting basic authentication
             # let's decipher the base64 encoded value
             if not auth.startswith('Basic '):
+                self._log_cef('Authorization header contains unknown protocol',
+                              7,  environ)
                 raise HTTPUnauthorized('Invalid token')
 
             auth = auth[len('Basic '):].strip()
@@ -126,12 +138,14 @@ class Authentication(object):
                 # passwords that contain ':'.
                 user_name, password = base64.decodestring(auth).split(':', 1)
             except (binascii.Error, ValueError):
+                self._log_cef('Authorization header is badly encoded',
+                              7, environ)
                 raise HTTPUnauthorized('Invalid token')
 
             # let's reject the call if the url is not owned by the user
             if (username is not None and user_name != username):
-                self.logger.cef('Username Does Not Match URL', 7,
-                                environ, config, user_name, AUTH_FAILURE)
+                self._log_cef('Username Does Not Match URL',
+                              7, environ, config, user_name, AUTH_FAILURE)
                 raise HTTPUnauthorized()
 
             # if this is an email, hash it. Save the original for logging and
@@ -140,6 +154,8 @@ class Authentication(object):
             try:
                 user_name = extract_username(user_name)
             except UnicodeError:
+                self._log_cef('Username contains invalid characters',
+                              7, environ)
                 raise HTTPBadRequest('Invalid characters specified in ' +
                                      'username', {}, 'Username must be BIDI ' +
                                      'compliant UTF-8')
@@ -149,6 +165,7 @@ class Authentication(object):
             try:
                 password = password.decode('utf8')
             except UnicodeDecodeError:
+                self._log_cef('Password is not utf-8 encoded', 7, environ)
                 raise HTTPUnauthorized()
 
             #first we need to figure out if this is old-style or new-style auth
@@ -178,6 +195,8 @@ class Authentication(object):
                 else:
                     if (check_node
                         and user.get('syncNode') != environ.get('HTTP_HOST')):
+                        self._log_cef('User authenticated to wrong node',
+                                      7, environ)
                         user_id = None
                         user = None
 
@@ -188,8 +207,8 @@ class Authentication(object):
                 if remote_user_original is not None and \
                     user_name != remote_user_original:
                         err_user += ' (%s)' % (remote_user_original)
-                self.logger.cef('User Authentication Failed', 5,
-                                environ, config, err_user, AUTH_FAILURE)
+                self._log_cef('User Authentication Failed', 5,
+                              environ, config, err_user, AUTH_FAILURE)
                 raise HTTPUnauthorized()
 
             # we're all clear ! setting up REMOTE_USER

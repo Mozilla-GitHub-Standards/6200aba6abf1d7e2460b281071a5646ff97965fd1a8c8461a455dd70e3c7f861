@@ -103,6 +103,12 @@ class TestBaseApp(unittest.TestCase):
               'app.modules': ['mod1', 'mod2', 'metlog_loader'],
               'mod1.backend': 'services.tests.test_baseapp.Mod1',
               'mod2.backend': 'services.tests.test_baseapp.Mod2',
+              'cef.use': 'true',
+              'cef.file': 'syslog',
+              'cef.vendor': 'mozilla',
+              'cef.version': '0',
+              'cef.device_version': '1.3',
+              'cef.product': 'weave',
               'metlog_loader.backend': 'services.metrics.MetlogLoader',
               'metlog_loader.config': metlog_cfg_path,
               }
