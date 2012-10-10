@@ -77,13 +77,25 @@ MEMORY_DUMP_FILE = os.environ.get("MOZSVC_MEMORY_DUMP_FILE",
 
 
 class MozSvcWorker(GeventWorker):
-    """GeventWorker that monitors for blocking of the event-loop."""
+    """Custom gunicorn worker with extra operational niceties.
+
+    This is a custom gunicorn worker class, based on the standard gevent worker
+    but with some extra operational- and debugging-related features:
+
+        * a background thread that monitors for blocking of the gevent
+          event-loop, and logs tracebacks if blocking code is found.
+
+        * a signal handler to dump memory usage data on SIGUSR2.
+
+    """
 
     def init_process(self):
-        # Only set up the tracing if we can and we need to.
+        # Set up a greenlet tracing hook to monitor for event-loop blockage,
+        # but only if monitoring is both possible and required.
         if hasattr(greenlet, "settrace") and MAX_BLOCKING_TIME > 0:
             # Grab a reference to the gevent hub.
-            # It is only visible from the main thread.
+            # It is needed in a background thread, but it only visible from
+            # the main thread, so we need to store a reference to it.
             self._active_hub = gevent.hub.get_hub()
             # Set up a trace function to record each greenlet switch.
             self._active_greenlet = None
@@ -94,7 +106,8 @@ class MozSvcWorker(GeventWorker):
             # fire-and-forget using the low-level start_new_thread function.
             self._main_thread_id = _real_get_ident()
             _real_start_new_thread(self._greenlet_blocking_monitor, ())
-        # Continue to superclass logic.
+
+        # Continue to superclass initialization logic.
         # Note that this runs the main loop and never returns.
         super(MozSvcWorker, self).init_process()
 
@@ -135,8 +148,8 @@ class MozSvcWorker(GeventWorker):
         greenlet has switched since it was last checked.  If not then an
         error log is generated.
 
-        The only exception is for th greenlet running the Hub, which is
-        allowed to block indefinitely while waiting for I/O.
+        The only exception is for the greenlet running the gevent Hub, which
+        is allowed to block indefinitely while waiting for I/O.
         """
         try:
             while True:
@@ -169,7 +182,11 @@ class MozSvcWorker(GeventWorker):
                 raise
 
     def _log_error(self, msg):
-        """Log an error message."""
+        """Log an error message.
+
+        This will send the error message out via metlog if it is configured,
+        or to stderr otherwise.
+        """
         logger = CLIENT_HOLDER.default_client
         if logger is not None:
             logger.error(msg)

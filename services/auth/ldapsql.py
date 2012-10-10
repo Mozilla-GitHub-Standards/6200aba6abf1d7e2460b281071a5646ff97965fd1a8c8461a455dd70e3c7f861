@@ -500,7 +500,8 @@ class LDAPAuth(ResetCodeManager):
         res = res.fetchone()
         if res is None:
             # unable to get a node
-            self.logger.debug('Unable to get a node for user id: %s' % str(user_id))
+            msg = 'Unable to get a node for user id: %s'
+            self.logger.debug(msg % str(user_id))
             raise NodeAttributionError(user_id)
 
         node = str(res.node)
@@ -520,8 +521,8 @@ class LDAPAuth(ResetCodeManager):
 
         if ldap_res != ldap.RES_MODIFY:
             # unable to set the node in LDAP
-            self.logger.debug('Unable to set the newly attributed node in LDAP '
-                         'for %s' % str(user_id))
+            self.logger.debug('Unable to set the newly attributed node '
+                              'in LDAP for %s' % str(user_id))
             raise NodeAttributionError(user_id)
 
         # node is set at this point
