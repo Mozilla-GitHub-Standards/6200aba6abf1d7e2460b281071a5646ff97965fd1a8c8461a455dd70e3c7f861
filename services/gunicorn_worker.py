@@ -48,6 +48,7 @@ import os
 import sys
 import time
 import thread
+import signal
 import traceback
 
 import greenlet
@@ -68,6 +69,11 @@ _real_get_ident = thread.get_ident
 # The maximum amount of time that the eventloop can be blocked
 # without causing an error to be logged.
 MAX_BLOCKING_TIME = float(os.environ.get("GEVENT_MAX_BLOCKING_TIME", 0.1))
+
+
+# The filename for dumping memory usage data.
+MEMORY_DUMP_FILE = os.environ.get("MOZSVC_MEMORY_DUMP_FILE",
+                                  "/tmp/mozsvc-memdump")
 
 
 class MozSvcWorker(GeventWorker):
@@ -91,6 +97,16 @@ class MozSvcWorker(GeventWorker):
         # Continue to superclass logic.
         # Note that this runs the main loop and never returns.
         super(MozSvcWorker, self).init_process()
+
+    def init_signals(self):
+        # Leave all signals defined by the superclass in place.
+        super(MozSvcWorker, self).init_signals()
+
+        # Hook up SIGUSR2 to dump memory usage information.
+        # This will be useful for debugging memory leaks and the like.
+        signal.signal(signal.SIGUSR2, self._dump_memory_usage)
+        if hasattr(signal, "siginterrupt"):
+            signal.siginterrupt(signal.SIGUSR2, False)
 
     def _greenlet_switch_tracer(self, what, (origin, target)):
         """Callback method executed on every greenlet switch.
@@ -159,3 +175,26 @@ class MozSvcWorker(GeventWorker):
             logger.error(msg)
         else:
             print>>sys.stderr, msg
+
+    def _dump_memory_usage(self, *args):
+        """Dump memory usage data to a file.
+
+        This method writes out memory usage data for the current process into
+        a timestamped file.  By default the data is written to a file named
+        /tmp/mozsvc-memdump.<pid>.<timestamp> but this can be customized
+        with the environment variable "MOSVC_MEMORY_DUMP_FILE".
+
+        If the "meliae" package is not installed or if an error occurs during
+        processing, then the file "mozsvc-memdump.error.<pid>.<timestamp>"
+        will be written with a traceback of the error.
+        """
+        now = int(time.time())
+        try:
+            filename = "%s.%d.%d" % (MEMORY_DUMP_FILE, os.getpid(), now)
+            from meliae import scanner
+            scanner.dump_all_objects(filename)
+        except Exception:
+            filename = "%s.error.%d.%d" % (MEMORY_DUMP_FILE, os.getpid(), now)
+            with open(filename, "w") as f:
+                f.write("ERROR DUMPING MEMORY USAGE\n\n")
+                traceback.print_exc(file=f)
