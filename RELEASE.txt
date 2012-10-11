@@ -1,3 +1,46 @@
+2.11 - 2012-10-11
+=================
+
+Impacts:
+
+- Ops
+- QA
+
+Dependencies: None
+
+Relevant Changes:
+
+This release includes some helpful debugging facilities, including the ability
+to dump memory usage data and some additional logging.  It also updates the
+dependencies to latest released versions, in particular the version of
+SQLAlchemy goes from 0.6.6 to 0.7.9.
+
+Bug 799874 - dump gunicorn memory usage data on SIGUSR2
+Bug 784567 - log reason for all authentication failures
+Bug 784926 - use metlog for CEF logging
+Bug 648607 - special-case handling of "lock wait timeout" errors
+
+
+2.10 - 2012-08-29
+=================
+
+Impacts:
+
+- Ops
+- QA
+
+Dependencies: None
+
+Relevant Changes:
+
+Bug 786178 - Custom gunicorn worker with support for gevent-blocking-detection
+Bug 781451 - Log greenlets that block the event loop for too long
+Bug 774392 - Support for Method Not Allowed in requests
+Bug 761315 - CatchErrorMiddleware should escape user-provided data
+Bug 774848 - Remove version requirement on sqlalchemy <= 0.6.99
+Bug 772716 - log user id and request processing time for each request
+Bug 689511 - Allow to disable creating new user accounts in server-full
+
 
 2.7 - 2011-10-18
 ================
