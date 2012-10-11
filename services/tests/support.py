@@ -116,7 +116,8 @@ class TestEnv(object):
             client = MetlogClient(sender, "syncserver")
         CLIENT_HOLDER.set_client(client.logger, client)
         if not hasattr(client, "cef"):
-            client.add_method(metlog_cef.cef_plugin.log_cef)
+            log_cef_fn = metlog_cef.cef_plugin.config_plugin(dict())
+            client.add_method(log_cef_fn)
 
         if load_sections is not None:
             for section in load_sections:

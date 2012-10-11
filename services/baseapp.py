@@ -115,7 +115,8 @@ class SyncServerApp(object):
             CLIENT_HOLDER.set_client(metlog.logger, metlog)
             self.logger = metlog
         if not hasattr(self.logger, "cef"):
-            self.logger.add_method(metlog_cef.cef_plugin.log_cef)
+            log_cef_fn = metlog_cef.cef_plugin.config_plugin(dict())
+            self.logger.add_method(log_cef_fn)
 
         # XXX: this should be converted to auto-load in self.modules
         # loading the authentication tool
