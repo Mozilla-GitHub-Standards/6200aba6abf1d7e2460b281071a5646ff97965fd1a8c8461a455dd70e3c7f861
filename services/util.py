@@ -380,22 +380,29 @@ def safe_execute(engine, *args, **kwargs):
         raise BackendError(str(exc))
 
 
+def _get_mysql_error_code(engine, exc):
+    """Try to get the MySQL error code associated with a db exception.
+
+    If the code can be determined then it is returned as an integer.  If
+    not (say, if the database is not mysql) then None is returned.
+    """
+    # Unfortunately this requires use of a private API.
+    # The try-except will also catch cases where we're not running MySQL.
+    try:
+        return engine.dialect._extract_error_code(exc.orig)
+    except AttributeError:
+        return None
+
+
 def _is_retryable_db_error(engine, exc):
     """Check whether we can safely retry in response to the given db error."""
     # Any connection-related errors can be safely retried.
     if exc.connection_invalidated:
         return True
-    # Try to get the MySQL error number.
-    # Unfortunately this requires use of a private API.
-    # The try-except will also catch cases where we're not running MySQL.
-    try:
-        mysql_error_code = engine.dialect._extract_error_code(exc.orig)
-    except AttributeError:
-        pass
-    else:
-        # MySQL Lock Wait Timeout errors can be safely retried.
-        if mysql_error_code == 1205:
-            return True
+    # MySQL Lock Wait Timeout errors can be safely retried.
+    mysql_error_code = _get_mysql_error_code(engine, exc.orig)
+    if mysql_error_code == 1205:
+        return True
     # Any other error is assumed not to be retryable.  Better safe than sorry.
     return False
 
@@ -410,9 +417,16 @@ def _is_operational_db_error(engine, exc):
     # All OperationalError or TimeoutError instances are operational.
     if isinstance(exc, (OperationalError, TimeoutError)):
         return True
-    # Any retryable error is operational.
-    if isinstance(exc, DBAPIError) and _is_retryable_db_error(engine, exc):
-        return True
+    # Only some DBAPIError instances are operational.
+    if isinstance(exc, DBAPIError):
+        mysql_error_code = _get_mysql_error_code(engine, exc.orig)
+        # Any retryable error is operational.
+        if _is_retryable_db_error(engine, exc):
+            return True
+        # MySQL "Query execution was interrupted" errors are operational.
+        # They're produced by ops killing long-running queries.
+        if mysql_error_code == 1317:
+            return True
     # Everything else counts as a programming error.
     return False
 
