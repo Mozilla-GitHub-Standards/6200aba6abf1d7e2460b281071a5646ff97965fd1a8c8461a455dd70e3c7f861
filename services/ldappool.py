@@ -112,7 +112,7 @@ class ConnectionManager(object):
     def __init__(self, uri, bind=None, passwd=None, size=10, retry_max=3,
                  retry_delay=.1, use_tls=False, single_box=False, timeout=-1,
                  connector_cls=StateConnector, use_pool=False,
-                 max_lifetime=600):
+                 max_lifetime=600, **kw):
         self._pool = []
         self.size = size
         self.retry_max = retry_max
@@ -131,7 +131,8 @@ class ConnectionManager(object):
         return len(self._pool)
 
     def _match(self, bind, passwd):
-        passwd = passwd.encode('utf8')
+        if isinstance(passwd, unicode):
+            passwd = passwd.encode('utf8')
         with self._pool_lock:
             inactives = []
 
@@ -192,8 +193,9 @@ class ConnectionManager(object):
         """
         tries = 0
         connected = False
-        passwd = passwd.encode('utf8')
         exc = None
+        if isinstance(passwd, unicode):
+            passwd = passwd.encode('utf8')
 
         # trying retry_max times in a row with a fresh connector
         while tries < self.retry_max and not connected:
