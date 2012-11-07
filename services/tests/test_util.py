@@ -48,7 +48,7 @@ from services.util import (function_moved, bigint2time, time2bigint,
                            ssha256, valid_password, get_source_ip,
                            CatchErrorMiddleware, round_time)
 from services.exceptions import BackendError
-from services.tests.support import initenv
+from services.tests.support import initenv, cleanupenv
 
 
 def return2():
@@ -79,6 +79,7 @@ class TestUtil(unittest.TestCase):
 
     def tearDown(self):
         urllib2.urlopen = self.oldopen
+        cleanupenv()
 
     def _urlopen(self, req, timeout=None):
         url = req.get_full_url()

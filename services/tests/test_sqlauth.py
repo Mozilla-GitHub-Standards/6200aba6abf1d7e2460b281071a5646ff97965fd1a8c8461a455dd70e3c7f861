@@ -40,7 +40,7 @@ import datetime
 from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
 
-from services.tests.support import initenv
+from services.tests.support import initenv, cleanupenv
 from services.auth.sql import SQLAuth
 from services.auth import ServicesAuth
 from services.util import ssha, BackendError, safe_execute
@@ -66,9 +66,7 @@ class TestSQLAuth(unittest.TestCase):
 
     def tearDown(self):
         self._safe_execute('delete from users')
-        sqlfile = self.auth.sqluri.split('sqlite:///')[-1]
-        if os.path.exists(sqlfile):
-            os.remove(sqlfile)
+        cleanupenv()
 
     def _safe_execute(self, *args, **kwds):
         return safe_execute(self.auth._engine, *args, **kwds)
@@ -122,16 +120,22 @@ class TestSQLAuth(unittest.TestCase):
         conf = os.path.join(testsdir, 'tests_nocreate.ini')
         appdir, config, auth = initenv(conf)
 
-        # this should fail because the table is absent
-        self.assertRaises(BackendError, auth.authenticate_user,
-                          'tarek', 'tarek')
+        try:
+            # this should fail because the table is absent
+            self.assertRaises(BackendError, auth.authenticate_user,
+                              'tarek', 'tarek')
+        finally:
+            cleanupenv(conf)
 
     def test_no_pool(self):
         # checks that sqlite gets the NullPool by default
         testsdir = os.path.dirname(__file__)
         conf = os.path.join(testsdir, 'tests_nocreate.ini')
         appdir, config, auth = initenv(conf)
-        self.assertTrue(isinstance(auth._engine.pool, NullPool))
+        try:
+            self.assertTrue(isinstance(auth._engine.pool, NullPool))
+        finally:
+            cleanupenv(conf)
 
 
 def test_suite():

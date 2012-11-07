@@ -49,11 +49,12 @@ from services.respcodes import ERROR_INVALID_WRITE
 from services.tests.support import CAN_MOCK_WSGI, mock_wsgi
 from services.exceptions import BackendError
 
+TEMP_DATABASE_FILE = "/tmp/test-services-%s.db" % (os.environ["MOZSVC_UUID"],)
 
 memory_config = {'backend': 'services.user.memory.MemoryUser',
                  'check_node': True}
 sql_config = {'backend': 'services.user.sql.SQLUser',
-              'sqluri': 'sqlite:////tmp/test.db',
+              'sqluri': 'sqlite:///' + TEMP_DATABASE_FILE,
               'check_node': True}
 ldap_config = {'backend': 'services.user.mozilla_ldap.LDAPUser',
                'ldapuri': 'ldap://localhost',
@@ -223,8 +224,8 @@ class TestUser(unittest.TestCase):
             raise SkipTest
 
         self._tests(load_and_configure(sql_config))
-        if os.path.exists("/tmp/test.db"):
-            os.unlink("/tmp/test.db")
+        if os.path.exists(TEMP_DATABASE_FILE):
+            os.unlink(TEMP_DATABASE_FILE)
 
     def test_user_ldap(self):
         try:

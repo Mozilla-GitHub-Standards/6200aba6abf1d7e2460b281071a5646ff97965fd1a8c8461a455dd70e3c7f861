@@ -34,11 +34,12 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-from ConfigParser import RawConfigParser
 import os
 import smtplib
-from email import message_from_string
 import contextlib
+import uuid
+from email import message_from_string
+from ConfigParser import RawConfigParser
 
 from webob import Request
 
@@ -50,6 +51,10 @@ import metlog_cef.cef_plugin
 
 from services.config import Config
 from services.pluginreg import load_and_configure
+
+
+if "MOZSVC_UUID" not in os.environ:
+    os.environ["MOZSVC_UUID"] = str(uuid.uuid4())
 
 
 class TestEnv(object):
@@ -160,16 +165,31 @@ def patch_captcha(valid=True):
 
 
 # non-class way of doing this
-def initenv(config=None):
-    """Reads the config file and instantiates an auth and a storage.
-    """
-    env_args = dict(load_sections=['auth'])
+def initenv(config=None, **env_args):
+    """Reads the config file and instantiates an auth."""
+    env_args.setdefault('load_sections', ['auth'])
     if not config:
-        env_args['ini_dir'] = os.path.dirname(__file__)
+        env_args.setdefault('ini_dir', os.path.dirname(__file__))
     else:
         env_args['ini_path'] = config
     testenv = TestEnv(**env_args)
     return testenv.ini_dir, testenv.config, testenv.auth
+
+
+def cleanupenv(config=None, **env_args):
+    """Reads the config file and cleans up any sqlite database files."""
+    env_args.setdefault('load_sections', [])
+    if not config:
+        env_args.setdefault('ini_dir', os.path.dirname(__file__))
+    else:
+        env_args['ini_path'] = config
+    testenv = TestEnv(**env_args)
+    for key in testenv.config:
+        if key.rsplit(".", 1)[-1] == "sqluri":
+            sqluri = testenv.config[key]
+            sqlfile = sqluri.split('sqlite:///')[-1]
+            if sqlfile != sqluri and os.path.exists(sqlfile):
+                os.remove(sqlfile)
 
 
 def check_memcache():
