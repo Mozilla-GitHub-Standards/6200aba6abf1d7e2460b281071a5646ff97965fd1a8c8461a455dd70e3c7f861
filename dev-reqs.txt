@@ -1,4 +1,5 @@
 cef
+docopt
 WebOb == 1.0.7
 Paste
 PasteDeploy
