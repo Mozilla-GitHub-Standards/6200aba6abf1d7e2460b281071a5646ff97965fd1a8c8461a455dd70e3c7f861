@@ -88,9 +88,13 @@ def whoisi_response(lines, **kw):
 def convert_response(request, lines, **kw):
     """Returns the response in the appropriate format, depending on the accept
     request."""
-    content_type = request.accept.best_match(('application/json',
-                                              'application/newlines',
-                                              'application/whoisi'))
+    try:
+        content_type = request.accept.best_match(('application/json',
+                                                  'application/newlines',
+                                                  'application/whoisi'))
+    except (ValueError, AssertionError):
+        # Bad input from the client could trigger either of these errors.
+        content_type = None
 
     if content_type == 'application/newlines':
         return newlines_response(lines, **kw)
@@ -98,4 +102,5 @@ def convert_response(request, lines, **kw):
         return whoisi_response(lines, **kw)
 
     # default response format is json
+    # TODO: technically we should return "406 Not Acceptable" here.
     return json_response(lines, **kw)
