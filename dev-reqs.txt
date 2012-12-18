@@ -10,7 +10,7 @@ Beaker
 python-memcached
 simplejson
 Routes
-SQLAlchemy
+SQLAlchemy <= 0.7.999
 PyMySQL
 pymysql_sa
 WSGIProxy
