@@ -17,3 +17,5 @@ WSGIProxy == 0.2.2
 recaptcha-client == 1.0.6
 metlog-py == 0.9.8
 metlog-cef == 0.2
+repoze.lru == 0.5
+repoze.who == 2.0

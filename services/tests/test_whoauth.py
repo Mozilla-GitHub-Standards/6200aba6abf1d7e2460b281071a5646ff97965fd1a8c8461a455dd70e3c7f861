@@ -39,43 +39,54 @@
 
 import unittest
 
+from nose.plugins.skip import SkipTest
+
 from services.whoauth import WhoAuthentication, HAVE_REPOZE_WHO
 from services.tests.test_wsgiauth import HTTPBasicAuthAPITestCases
 
 
-if HAVE_REPOZE_WHO:
+class TestWhoAuthentication(HTTPBasicAuthAPITestCases, unittest.TestCase):
+    """Tests for WhoAuthentication class in default configuration."""
+    auth_class = WhoAuthentication
 
-    class TestWhoAuthentication(HTTPBasicAuthAPITestCases, unittest.TestCase):
-        """Tests for WhoAuthentication class in default configuration."""
-        auth_class = WhoAuthentication
+    def setUp(self):
+        if not HAVE_REPOZE_WHO:
+            raise SkipTest
+        super(TestWhoAuthentication, self).setUp()
 
-    class TestWhoAuthentication_NewStyleAuth(TestWhoAuthentication):
-        """Tests for WhoAuthentication class using new-style auth backend."""
-        BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
-        BASE_CONFIG["auth.backend"] = \
-                            'services.tests.test_wsgiauth.BadPasswordUserTool'
+    # Unfortunately repoze.who forcibly decodes all basic-auth passwords into
+    # unicode, falling back to latin1 if the utf8 is invalid.  That makes this
+    # test rather pointless.
+    def test_bad_utf8_password(self):
+        pass
 
-    WHO_CONFIG = {
-        "who.plugin.basic.use": "repoze.who.plugins.basicauth:make_plugin",
-        "who.plugin.basic.realm": "Sync",
-        "who.plugin.backend.use": "services.whoauth.backendauth:make_plugin",
-        "who.authenticators.plugins": "backend",
-        "who.identifiers.plugins": "basic",
-        "who.challengers.plugins": "basic",
-        }
 
-    class TestWhoAuthentication_FromConfig(TestWhoAuthentication):
-        """Tests for WhoAuthentication class loaded from a config file"""
-        BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
-        BASE_CONFIG.update(WHO_CONFIG)
+class TestWhoAuthentication_NewStyleAuth(TestWhoAuthentication):
+    """Tests for WhoAuthentication class using new-style auth backend."""
+    BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
+    BASE_CONFIG["auth.backend"] = \
+                        'services.tests.test_wsgiauth.BadPasswordUserTool'
+
+WHO_CONFIG = {
+    "who.plugin.basic.use": "repoze.who.plugins.basicauth:make_plugin",
+    "who.plugin.basic.realm": "Sync",
+    "who.plugin.backend.use": "services.whoauth.backendauth:make_plugin",
+    "who.authenticators.plugins": "backend",
+    "who.identifiers.plugins": "basic",
+    "who.challengers.plugins": "basic",
+    }
+
+class TestWhoAuthentication_FromConfig(TestWhoAuthentication):
+    """Tests for WhoAuthentication class loaded from a config file"""
+    BASE_CONFIG = TestWhoAuthentication.BASE_CONFIG.copy()
+    BASE_CONFIG.update(WHO_CONFIG)
 
 
 def test_suite():
     suite = unittest.TestSuite()
-    if HAVE_REPOZE_WHO:
-        suite.addTest(unittest.makeSuite(TestWhoAuthentication))
-        suite.addTest(unittest.makeSuite(TestWhoAuthentication_NewStyleAuth))
-        suite.addTest(unittest.makeSuite(TestWhoAuthentication_FromConfig))
+    suite.addTest(unittest.makeSuite(TestWhoAuthentication))
+    suite.addTest(unittest.makeSuite(TestWhoAuthentication_NewStyleAuth))
+    suite.addTest(unittest.makeSuite(TestWhoAuthentication_FromConfig))
     return suite
 
 

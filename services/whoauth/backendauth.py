@@ -79,9 +79,11 @@ class BackendAuthPlugin(object):
         identity["username"] = username = extract_username(username)
 
         # Normalize the password, if any, to be unicode.
-        if "password" in identity:
+        # It it's not valid utf8 then authentication fails.
+        password = identity.get("password")
+        if password is not None and not isinstance(password, unicode):
             try:
-                identity["password"] = identity["password"].decode("utf8")
+                identity["password"] = password.decode("utf8")
             except UnicodeDecodeError:
                 return None
 

@@ -17,3 +17,5 @@ WSGIProxy
 recaptcha-client
 metlog-py >= 0.9.5
 metlog-cef
+repoze.lru
+repoze.who
