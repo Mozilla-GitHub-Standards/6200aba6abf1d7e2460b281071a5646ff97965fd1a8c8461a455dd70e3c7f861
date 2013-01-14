@@ -39,7 +39,7 @@ Authentication class.
 import binascii
 import base64
 
-from webob.exc import HTTPUnauthorized, HTTPBadRequest
+from webob.exc import HTTPUnauthorized, HTTPBadRequest, HTTPServerError
 
 from metlog.holder import CLIENT_HOLDER
 from metlog_cef import AUTH_FAILURE
@@ -119,9 +119,12 @@ class Authentication(object):
         """
         environ = request.environ
 
+        # If something further up the stack has already dealt with auth,
+        # then things are highly unlikely to work properly.
         if 'REMOTE_USER' in environ:
-            # already authenticated
-            return environ['REMOTE_USER']
+            msg = 'The webserver appears to have handled authentication '\
+                  'internally, which is not compatible with this product.'
+            raise HTTPServerError(msg)
 
         auth = environ.get('HTTP_AUTHORIZATION')
         if auth is not None:

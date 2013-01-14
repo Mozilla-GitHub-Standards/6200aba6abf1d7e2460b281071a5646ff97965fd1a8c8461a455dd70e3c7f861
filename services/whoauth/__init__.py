@@ -38,7 +38,7 @@
 Authentication class based on repoze.who
 """
 
-from webob.exc import HTTPUnauthorized
+from webob.exc import HTTPUnauthorized, HTTPServerError
 
 try:
     from repoze.who.api import APIFactory
@@ -136,9 +136,12 @@ class WhoAuthentication(object):
         if match.get('auth') != 'True':
             return
 
-        # If they have REMOTE_USER, they've already authed.
-        if "REMOTE_USER" in request.environ:
-            return
+        # If something further up the stack has already dealt with auth,
+        # then things are highly unlikely to work properly.
+        if 'REMOTE_USER' in request.environ:
+            msg = 'The webserver appears to have handled authentication '\
+                  'internally, which is not compatible with this product.'
+            raise HTTPServerError(msg)
 
         # Authenticate the user.
         api = self._api_factory(request.environ)
