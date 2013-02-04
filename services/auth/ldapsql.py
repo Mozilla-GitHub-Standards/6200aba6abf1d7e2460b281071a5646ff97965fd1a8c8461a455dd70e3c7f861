@@ -121,7 +121,7 @@ class LDAPAuth(ResetCodeManager):
         if self.sqluri is not None:
             driver = urlparse.urlparse(self.sqluri).scheme.lower()
             if "mysql" in driver:
-                sqlkw['reset_on_return'] = reset_on_return
+                sqlkw['pool_reset_on_return'] = reset_on_return
             engine = create_engine(sqluri, **sqlkw)
             for table in tables:
                 table.metadata.bind = engine

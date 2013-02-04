@@ -94,7 +94,7 @@ class SQLAuth(ResetCodeManager):
                 sqlkw['pool_recycle'] = int(pool_recycle)
             driver = urlparse.urlparse(self.sqluri).scheme.lower()
             if "mysql" in driver:
-                sqlkw['reset_on_return'] = False
+                sqlkw['pool_reset_on_return'] = False
         if no_pool or sqluri.startswith('sqlite'):
             sqlkw['poolclass'] = NullPool
 

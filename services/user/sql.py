@@ -39,6 +39,8 @@
 Users are stored with digest password (ssha256)
 """
 
+import urlparse
+
 from sqlalchemy import Integer, String
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.ext.declarative import declarative_base, Column
@@ -98,8 +100,9 @@ class SQLUser(object):
             if not no_pool:
                 sqlkw['pool_size'] = int(pool_size)
                 sqlkw['pool_recycle'] = int(pool_recycle)
-            if sqluri.startswith('mysql'):
-                sqlkw['reset_on_return'] = False
+            driver = urlparse.urlparse(self.sqluri).scheme.lower()
+            if 'mysql' in driver:
+                sqlkw['pool_reset_on_return'] = False
         if no_pool or sqluri.startswith('sqlite'):
             sqlkw['poolclass'] = NullPool
 
