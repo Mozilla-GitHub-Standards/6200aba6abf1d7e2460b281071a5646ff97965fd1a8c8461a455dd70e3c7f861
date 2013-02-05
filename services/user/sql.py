@@ -100,7 +100,7 @@ class SQLUser(object):
             if not no_pool:
                 sqlkw['pool_size'] = int(pool_size)
                 sqlkw['pool_recycle'] = int(pool_recycle)
-            driver = urlparse.urlparse(self.sqluri).scheme.lower()
+            driver = urlparse.urlparse(sqluri).scheme.lower()
             if 'mysql' in driver:
                 sqlkw['pool_reset_on_return'] = False
         if no_pool or sqluri.startswith('sqlite'):
