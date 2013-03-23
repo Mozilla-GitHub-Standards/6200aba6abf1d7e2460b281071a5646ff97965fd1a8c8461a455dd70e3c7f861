@@ -368,6 +368,9 @@ def safe_execute(engine, *args, **kwargs):
             return engine.execute(*args, **kwargs)
         except DBAPIError, exc:
             if _is_retryable_db_error(engine, exc):
+                logger = CLIENT_HOLDER.default_client
+                logger.incr('services.util.safe_execute.retry')
+                logger.debug('retrying due to db error %r', exc)
                 return engine.execute(*args, **kwargs)
             else:
                 raise
