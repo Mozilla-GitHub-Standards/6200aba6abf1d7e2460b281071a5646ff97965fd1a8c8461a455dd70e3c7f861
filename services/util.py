@@ -380,6 +380,13 @@ def safe_execute(engine, *args, **kwargs):
         err = traceback.format_exc()
         logger = CLIENT_HOLDER.default_client
         logger.error(err)
+        # Due to an apparent bug in SQLAlchemy, it's possible for some kinds
+        # of connection failure to leave zombies checked out of the pool.
+        # Ref:  http://www.sqlalchemy.org/trac/ticket/2695
+        # We employ a rather brutal workaround: re-create the entire pool.
+        if _get_mysql_error_code(engine, exc) in (2006, 2013, 2014):
+            if not exc.connection_invalidated:
+                engine.dispose()
         raise BackendError(str(exc))
 
 
