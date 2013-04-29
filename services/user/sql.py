@@ -36,7 +36,7 @@
 # ***** END LICENSE BLOCK *****
 """ SQL user management
 
-Users are stored with digest password (ssha256)
+Users are stored with digest password (scrypt)
 """
 
 import urlparse
@@ -48,7 +48,7 @@ from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 
-from services.util import (validate_password, ssha256,
+from services.util import (validate_password, sscrypt,
                            safe_execute, create_engine)
 from services.user import User, _password_to_credentials
 from services.exceptions import BackendError
@@ -136,7 +136,7 @@ class SQLUser(object):
         if not self.allow_new_users:
             raise BackendError("Creation of new users is disabled")
 
-        password_hash = ssha256(password)
+        password_hash = sscrypt(password)
         query = insert(users).values(username=username, mail=email,
                                      password=password_hash,
                                      accountStatus=1,
@@ -290,7 +290,7 @@ class SQLUser(object):
         Returns:
             True if the change was successful, False otherwise
         """
-        password_hash = ssha256(new_password.encode('utf8'))
+        password_hash = sscrypt(new_password.encode('utf8'))
         return self.admin_update_field(user, 'password', password_hash)
 
     @_password_to_credentials

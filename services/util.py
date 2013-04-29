@@ -56,6 +56,8 @@ import warnings
 from webob.exc import HTTPBadRequest, HTTPServiceUnavailable
 from webob import Response
 
+import scrypt
+
 import sqlalchemy
 from sqlalchemy.exc import DBAPIError, OperationalError, TimeoutError
 
@@ -183,6 +185,21 @@ def ssha256(password, salt=None):
     return "{SSHA-256}%s" % ssha
 
 
+def sscrypt(password, salt=None):
+    """Returns a Salted-Scrypt password hash
+
+    Args:
+        password: password
+        salt: salt to use. If none, one is generated
+
+    """
+    password = password.encode('utf8')
+    if salt is None:
+        salt = _gensalt()
+    sscrypt = base64.b64encode(scrypt.hash(password, salt) + salt).strip()
+    return "{SSCRYPT}%s" % sscrypt
+
+
 def validate_password(clear, hash):
     """Validates a Salted-SHA(256) password
 
@@ -190,7 +207,10 @@ def validate_password(clear, hash):
         clear: password in clear text
         hash: hash of the password
     """
-    if hash.startswith('{SSHA-256}'):
+    if hash.startswith('{SSCRYPT}'):
+        real_hash = hash.split('{SSCRYPT}')[-1]
+        hash_meth = sscrypt
+    elif hash.startswith('{SSHA-256}'):
         real_hash = hash.split('{SSHA-256}')[-1]
         hash_meth = ssha256
     else:
