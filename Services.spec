@@ -1,8 +1,8 @@
 %define name python26-services
 %define pythonname Services
-%define version 2.12
+%define version 2.13
 %define unmangled_version %{version}
-%define release 8
+%define release 1
 
 Summary: Services core tools
 Name: %{name}

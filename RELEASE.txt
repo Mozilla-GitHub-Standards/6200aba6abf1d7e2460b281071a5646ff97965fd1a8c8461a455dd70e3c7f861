@@ -1,3 +1,22 @@
+2.13 - 2013-04-29
+=================
+
+Impacts:
+
+- Ops
+- QA
+
+Dependencies: None
+
+Relevant Changes:
+
+This release includes the new User backend "ProxyCacheUser", designed to
+help with standing up services inside external infra such as AWS.  It also
+changes the SQLUser backend to use scrypt for password hashing by default.
+
+Bug 865107 - ProxyCacheUser backend, for authing from within AWS
+
+
 2.12 - 2012-10-19
 =================
 
