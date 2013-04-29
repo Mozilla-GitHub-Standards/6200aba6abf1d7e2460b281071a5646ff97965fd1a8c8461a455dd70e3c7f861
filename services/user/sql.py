@@ -131,16 +131,21 @@ class SQLUser(object):
         user['userid'] = res.userid
         return res.userid
 
-    def create_user(self, username, password, email):
+    def create_user(self, username, password, email, **extra_fields):
         """Creates a user. Returns True on success."""
         if not self.allow_new_users:
             raise BackendError("Creation of new users is disabled")
 
         password_hash = sscrypt(password)
-        query = insert(users).values(username=username, mail=email,
-                                     password=password_hash,
-                                     accountStatus=1,
-                                     syncNode='')
+        query = insert(users).values(
+            userid=extra_fields.get('userid', None),
+            username=username,
+            password=password_hash,
+            accountStatus=extra_fields.get('accountStatus', 1),
+            mail=email,
+            mailVerified = extra_fields.get('mailVerified', 0),
+            syncNode=extra_fields.get('syncNode', '')
+        )
         try:
             res = safe_execute(self._engine, query)
         except IntegrityError:
