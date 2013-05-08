@@ -137,15 +137,15 @@ class SQLUser(object):
             raise BackendError("Creation of new users is disabled")
 
         password_hash = sscrypt(password)
-        query = insert(users).values(
-            userid=extra_fields.get('userid', None),
-            username=username,
-            password=password_hash,
-            accountStatus=extra_fields.get('accountStatus', 1),
-            mail=email,
-            mailVerified = extra_fields.get('mailVerified', 0),
-            syncNode=extra_fields.get('syncNode', '')
-        )
+        values = {
+            'username': username,
+            'password': password_hash,
+            'mail': email,
+        }
+        for field in ('userid', 'accountStatus', 'mailVerified', 'syncNode'):
+            if field in extra_fields:
+                values[field] = extra_fields[field]
+        query = insert(users).values(**values)
         try:
             res = safe_execute(self._engine, query)
         except IntegrityError:
