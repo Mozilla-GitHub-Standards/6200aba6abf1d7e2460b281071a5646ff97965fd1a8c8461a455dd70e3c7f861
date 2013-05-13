@@ -70,6 +70,10 @@ sreg_config = {'backend': 'services.user.sreg.SregUser',
                'sreg_path': '',
                'sreg_scheme': 'http',
                'check_node': True}
+proxycache_config = {'backend': 'services.user.proxycache.ProxyCacheUser',
+                     'whoami_uri': 'http://localhost',
+                     'sqluri': 'sqlite:///' + TEMP_DATABASE_FILE,
+                     'check_node': True}
 
 
 class Request(object):
@@ -280,6 +284,66 @@ class TestUser(unittest.TestCase):
         with mock_wsgi(_user_exists_response):
             self.assertFalse(mgr.create_user('user1', 'password1',
                                              'test@mozilla.com'))
+
+    def test_user_proxycache(self):
+        if not CAN_MOCK_WSGI:
+            raise SkipTest
+
+        mgr = load_and_configure(proxycache_config)
+
+        # We can authenticate a proper user from a cold cache,
+        # by pulling their data from the server.
+
+        def _successful_response():
+            return Response('{"userid": 42, "syncNode": "blah"}')
+
+        user = User("test1")
+        with mock_wsgi(_successful_response):
+            userid = mgr.authenticate_user(user, "password")
+            self.assertEquals(userid, 42)
+
+        # Subsequent authentication attempts will use the local cache.
+
+        def _error_response():
+            assert False, "this should not get called"
+
+        user = User("test1")
+        with mock_wsgi(_error_response):
+            userid = mgr.authenticate_user(user, "password", ["syncNode"])
+            self.assertEquals(userid, 42)
+            self.assertEquals(user["syncNode"], "blah")
+
+        # Bad passwords will cause it to refresh the cache.
+
+        whoami_was_called = []
+
+        def _unsuccessful_response():
+            whoami_was_called.append(True)
+            return Response(status=401)
+
+        user = User("test1")
+        with mock_wsgi(_unsuccessful_response):
+            userid = mgr.authenticate_user(user, "wrongpassword")
+            self.assertEquals(userid, None)
+            self.assertTrue(whoami_was_called)
+
+        # Cold cache + bad password = authentication fails.
+        # Switch to a different username so that the cache is cold.
+
+        user = User("test2")
+        with mock_wsgi(_unsuccessful_response):
+            userid = mgr.authenticate_user(user, "password")
+            self.assertEquals(userid, None)
+
+        # The failed auth should not populate the local cache.
+
+        whoami_was_called = []
+        user = User("test2")
+        with mock_wsgi(_unsuccessful_response):
+            userid = mgr.authenticate_user(user, "password")
+            self.assertEquals(userid, None)
+            self.assertTrue(whoami_was_called)
+
 
     def test_extract_username(self):
         self.assertEquals(extract_username('username'), 'username')

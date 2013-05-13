@@ -165,7 +165,7 @@ class ProxyCacheUser(object):
             "userid": user_data["userid"],
             "username": username,
             "password": password,
-            "mail": user_data.get("mail", ""),
+            "email": user_data.get("mail", ""),
             CACHE_TIMESTAMP_FIELD: now,
             "syncNode": user_data.get("syncNode", ""),
         }
