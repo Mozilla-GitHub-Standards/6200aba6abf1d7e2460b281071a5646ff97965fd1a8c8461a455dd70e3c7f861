@@ -301,6 +301,7 @@ class TestUser(unittest.TestCase):
         with mock_wsgi(_successful_response):
             userid = mgr.authenticate_user(user, "password")
             self.assertEquals(userid, 42)
+            self.assertEquals(user["userid"], 42)
 
         # Subsequent authentication attempts will use the local cache.
 

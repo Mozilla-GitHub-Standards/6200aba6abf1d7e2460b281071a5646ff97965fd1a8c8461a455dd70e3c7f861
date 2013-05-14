@@ -169,9 +169,13 @@ class ProxyCacheUser(object):
             CACHE_TIMESTAMP_FIELD: now,
             "syncNode": user_data.get("syncNode", ""),
         }
-        if not self._cache.create_user(**new_user_data):
-            raise BackendError("failed to add user to cache")
-        return new_user_data["userid"]
+
+        # This could fail if there's a race for a particular user,
+        # but it'll just return False rather than raising an exception.
+        self._cache.create_user(**new_user_data)
+
+        user.update(new_user_data)
+        return user["userid"]
 
     # All other methods are disabled on the proxy.
     # Only authenticate_user() is allowed.
