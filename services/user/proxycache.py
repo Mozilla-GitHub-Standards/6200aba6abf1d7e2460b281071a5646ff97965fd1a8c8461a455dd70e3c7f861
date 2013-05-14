@@ -75,12 +75,15 @@ from services.exceptions import BackendError
 
 from services.user.sql import SQLUser, _password_to_credentials
 
+from metlog.holder import CLIENT_HOLDER
+
 
 # This is a field in the SQLUser auth database, that we're going to
 # hijack to store the last-checked timestamp for user passwords.
 # Inelegant, but means we can re-use the SQLUser code unchanged.
 CACHE_TIMESTAMP_FIELD = "accountStatus"
 
+METLOG_PREFIX = "services.user.proxycache"
 
 class ProxyCacheUser(object):
     """Caching Proxy User backend, that keeps an SQL cache of main user db.
@@ -137,6 +140,7 @@ class ProxyCacheUser(object):
         if userid is not None:
             expiry_time = user[CACHE_TIMESTAMP_FIELD] + self.cache_timeout
             if expiry_time > now:
+                CLIENT_HOLDER.default_client.incr(METLOG_PREFIX + "cache_hit")
                 return userid
 
         # This might have failed due to missing account, missing or expired
@@ -174,6 +178,7 @@ class ProxyCacheUser(object):
         # but it'll just return False rather than raising an exception.
         self._cache.create_user(**new_user_data)
 
+        CLIENT_HOLDER.default_client.incr(METLOG_PREFIX + "cache_miss")
         user.update(new_user_data)
         return user["userid"]
 
