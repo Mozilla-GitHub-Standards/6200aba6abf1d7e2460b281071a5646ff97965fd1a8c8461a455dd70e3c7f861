@@ -150,17 +150,27 @@ class ProxyCacheUser(object):
         username = user.get("username")
         if username is None:
             return None
-        code, _, body = get_url(self.whoami_uri, "GET",
-                                user=username, password=password)
+        code, headers, body = get_url(self.whoami_uri, "GET",
+                                      user=username, password=password)
         if code == 401:
             return None
         if code != 200:
+            logger = CLIENT_HOLDER.default_client
+            logger.error("whoami API unexpected behaviour")
+            logger.error("  code: %r", code)
+            logger.error("  headers: %r", headers)
+            logger.error("  body: %r", body)
             raise BackendError("whoami API unexpected behaviour")
 
         # Now we know the account is good, write it into the cache db.
         try:
             user_data = json.loads(body)
         except ValueError:
+            logger = CLIENT_HOLDER.default_client
+            logger.error("whoami API produced invalid JSON")
+            logger.error("  code: %r", code)
+            logger.error("  headers: %r", headers)
+            logger.error("  body: %r", body)
             raise BackendError("whoami API produced invalid JSON")
 
         self._cache.delete_user(user)
