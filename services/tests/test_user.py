@@ -70,6 +70,9 @@ sreg_config = {'backend': 'services.user.sreg.SregUser',
                'sreg_path': '',
                'sreg_scheme': 'http',
                'check_node': True}
+proxy_config = {'backend': 'services.user.proxy.ProxyUser',
+                     'whoami_uri': 'http://localhost',
+                     'check_node': True}
 proxycache_config = {'backend': 'services.user.proxycache.ProxyCacheUser',
                      'whoami_uri': 'http://localhost',
                      'sqluri': 'sqlite:///' + TEMP_DATABASE_FILE,
@@ -284,6 +287,52 @@ class TestUser(unittest.TestCase):
         with mock_wsgi(_user_exists_response):
             self.assertFalse(mgr.create_user('user1', 'password1',
                                              'test@mozilla.com'))
+
+    def test_user_proxy(self):
+        if not CAN_MOCK_WSGI:
+            raise SkipTest
+
+        mgr = load_and_configure(proxy_config)
+
+        # Test for successful authentication
+
+        whoami_was_called = []
+
+        def _successful_response():
+            whoami_was_called.append(True)
+            return Response('{"userid": 42, "syncNode": "blah"}')
+
+        user = User("test1")
+        with mock_wsgi(_successful_response):
+            userid = mgr.authenticate_user(user, "password")
+            self.assertTrue(whoami_was_called)
+            self.assertEquals(userid, 42)
+            self.assertEquals(user["userid"], 42)
+
+        # Test that we call the whoami API each time, no caching etc.
+
+        del whoami_was_called[:]
+
+        user = User("test1")
+        with mock_wsgi(_successful_response):
+            userid = mgr.authenticate_user(user, "password")
+            self.assertTrue(whoami_was_called)
+            self.assertEquals(userid, 42)
+            self.assertEquals(user["userid"], 42)
+
+        # Test unsuccessful authentication.
+
+        del whoami_was_called[:]
+
+        def _unsuccessful_response():
+            whoami_was_called.append(True)
+            return Response(status=401)
+
+        user = User("test1")
+        with mock_wsgi(_unsuccessful_response):
+            userid = mgr.authenticate_user(user, "wrongpassword")
+            self.assertTrue(whoami_was_called)
+            self.assertEquals(userid, None)
 
     def test_user_proxycache(self):
         if not CAN_MOCK_WSGI:
