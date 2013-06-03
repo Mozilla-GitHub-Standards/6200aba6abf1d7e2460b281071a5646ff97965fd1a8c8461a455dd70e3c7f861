@@ -36,12 +36,8 @@
 """
 Custom gevent-based worker class for gunicorn.
 
-This module provides a custom GeventWorker subclass for gunicorn which is
-useful for debugging greenlet-blocking issues in production.  The worker
-traces all switches back to the gevent hub, and runs a background thread to
-check whether such switches are happening regularly.  If no switch occurs
-within a configurable timeout, it emits an error log with a stacktrace of
-the blocking code.
+This module provides a custom GeventWorker subclass for gunicorn, with some
+extra operational niceties.
 """
 
 import os
@@ -85,8 +81,15 @@ class MozSvcWorker(GeventWorker):
         * a background thread that monitors for blocking of the gevent
           event-loop, and logs tracebacks if blocking code is found.
 
+        * a timeout enforced on each individual request, rather than on
+          inactivity of the worker as a whole.
+
         * a signal handler to dump memory usage data on SIGUSR2.
 
+    To detect eventloop blocking, the worker installs a greenlet trace
+    function that increments a counter on each context switch.  A background
+    (os-level) thread monitors this counter and prints a traceback if it has
+    not changed within a configurable number of seconds.
     """
 
     def init_process(self):
@@ -120,6 +123,13 @@ class MozSvcWorker(GeventWorker):
         signal.signal(signal.SIGUSR2, self._dump_memory_usage)
         if hasattr(signal, "siginterrupt"):
             signal.siginterrupt(signal.SIGUSR2, False)
+
+    def handle_request(self, *args):
+        # Apply the configured 'timeout' value to each individual request.
+        # Note that self.timeout is set to half the configured timeout by
+        # the arbiter, so we use the value directly from the config.
+        with gevent.Timeout(self.cfg.timeout):
+            return super(MozSvcWorker, self).handle_request(*args)
 
     def _greenlet_switch_tracer(self, what, (origin, target)):
         """Callback method executed on every greenlet switch.
