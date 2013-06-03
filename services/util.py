@@ -376,6 +376,60 @@ def create_engine(*args, **kwds):
         os.umask(old_umask)
 
 
+def execute_with_cleanup(engine, query, *args, **kwargs):
+    """Execution wrapper that kills queries on untimely exit.
+
+    This is a simple wrapper for engine.execute() that will clean up any
+    running queries if the execution is interrupted by a control-flow
+    exception such as KeyboardInterrupt or gevent.Timeout.
+
+    The cleanup currently works only for the PyMySQL driver.  Other drivers
+    will still work, they just won't get the cleanup.
+    """
+    conn = engine.contextual_connect(close_with_result=True)
+    try:
+        return conn.execute(query, *args, **kwargs)
+    except Exception:
+        # Normal exceptions are passed straight through.
+        raise
+    except BaseException:
+        # Control-flow exceptions trigger the cleanup logic.
+        exc, val, tb = sys.exc_info()
+        try:
+            # Only cleanup SELECT, INSERT or UPDATE statements.
+            # There are concerns that rolling back DELETEs is too costly.
+            # XXX TODO: won't work if we prepend a comment to the queries.
+            query_str = str(query).upper()
+            if not query_str.startswith("SELECT "):
+                if not query_str.startswith("INSERT "):
+                    if not query_str.startswith("UPDATE "):
+                        raise
+            # The KILL command is specific to MySQL, and this method of getting
+            # the threadid is specific to the PyMySQL driver.  Other drivers
+            # will cause an AttributeError, failing through to the "finally"
+            # clause at the end of this block.
+            cleanup_query = "KILL %d" % (conn.connection.server_thread_id[0],)
+            # Use a freshly-created connection so that we don't block waiting
+            # for something from the pool.  Unfortunately this requires use of
+            # a private API and raw cursor access.
+            cleanup_conn = engine.pool._create_connection()
+            try:
+                cleanup_cursor = cleanup_conn.connection.cursor()
+                try:
+                    cleanup_cursor.execute(cleanup_query)
+                finally:
+                    cleanup_cursor.close()
+            finally:
+                cleanup_conn.close()
+        finally:
+            try:
+                # Don't return this connection to the pool.
+                conn.invalidate()
+            finally:
+                # Always re-raise the original error.
+                raise exc, val, tb
+
+
 def safe_execute(engine, *args, **kwargs):
     """Execution wrapper that will raise a HTTPServiceUnavailableError
     on any OperationalError errors and log it.
@@ -385,13 +439,13 @@ def safe_execute(engine, *args, **kwargs):
         # if e.g. the server timed out the connection.  SQLAlchemy purges the
         # the whole connection pool if this happens, so one retry is enough.
         try:
-            return engine.execute(*args, **kwargs)
+            return execute_with_cleanup(engine, *args, **kwargs)
         except DBAPIError, exc:
             if _is_retryable_db_error(engine, exc):
                 logger = CLIENT_HOLDER.default_client
                 logger.incr('services.util.safe_execute.retry')
                 logger.debug('retrying due to db error %r', exc)
-                return engine.execute(*args, **kwargs)
+                return execute_with_cleanup(engine, *args, **kwargs)
             else:
                 raise
     except Exception, exc:
