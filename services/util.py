@@ -395,6 +395,8 @@ def execute_with_cleanup(engine, query, *args, **kwargs):
     except BaseException:
         # Control-flow exceptions trigger the cleanup logic.
         exc, val, tb = sys.exc_info()
+        logger = CLIENT_HOLDER.default_client
+        logger.debug("query was interrupted by %s", val)
         try:
             # Only cleanup SELECT, INSERT or UPDATE statements.
             # There are concerns that rolling back DELETEs is too costly.
@@ -403,12 +405,15 @@ def execute_with_cleanup(engine, query, *args, **kwargs):
             if not query_str.startswith("SELECT "):
                 if not query_str.startswith("INSERT "):
                     if not query_str.startswith("UPDATE "):
+                        logger.debug("  refusing to kill unsafe query")
                         raise
             # The KILL command is specific to MySQL, and this method of getting
             # the threadid is specific to the PyMySQL driver.  Other drivers
             # will cause an AttributeError, failing through to the "finally"
             # clause at the end of this block.
-            cleanup_query = "KILL %d" % (conn.connection.server_thread_id[0],)
+            thread_id = conn.connection.server_thread_id[0]
+            logger.debug("  killing connection %d", thread_id)
+            cleanup_query = "KILL %d" % (thread_id,)
             # Use a freshly-created connection so that we don't block waiting
             # for something from the pool.  Unfortunately this requires use of
             # a private API and raw cursor access.
@@ -417,6 +422,10 @@ def execute_with_cleanup(engine, query, *args, **kwargs):
                 cleanup_cursor = cleanup_conn.connection.cursor()
                 try:
                     cleanup_cursor.execute(cleanup_query)
+                    logger.debug("  successfully killed %d", thread_id)
+                except Exception:
+                    logger.exception("  failed to kill %d", thread_id)
+                    raise
                 finally:
                     cleanup_cursor.close()
             finally:
