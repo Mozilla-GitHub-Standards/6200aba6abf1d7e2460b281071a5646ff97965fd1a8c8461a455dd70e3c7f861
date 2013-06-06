@@ -405,7 +405,8 @@ def execute_with_cleanup(engine, query, *args, **kwargs):
             if not query_str.startswith("SELECT "):
                 if not query_str.startswith("INSERT "):
                     if not query_str.startswith("UPDATE "):
-                        logger.debug("  refusing to kill unsafe query")
+                        msg = "  refusing to kill unsafe query: %s"
+                        logger.debug(msg, query_str[:100])
                         raise
             # The KILL command is specific to MySQL, and this method of getting
             # the threadid is specific to the PyMySQL driver.  Other drivers
