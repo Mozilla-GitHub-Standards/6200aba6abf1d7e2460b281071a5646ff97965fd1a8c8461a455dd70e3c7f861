@@ -122,6 +122,8 @@ class ProxyCacheUser(object):
         # This is secure, but will reduce the re-usability of the cache.
         if secret_key is None:
             secret_key = os.urandom(32)
+        elif len(secret_key) < 32:
+            raise ValueError("secret_key should be at least 256 bit")
         self.hmac_master = hmac.new(secret_key, "", hashlib.sha256)
         # Default to memcached running on localhost if no server specified.
         if isinstance(cache_servers, str):
