@@ -13,6 +13,7 @@ Routes
 SQLAlchemy <= 0.7.999
 PyMySQL
 pymysql_sa
+pylibmc
 WSGIProxy
 recaptcha-client
 metlog-py >= 0.9.5

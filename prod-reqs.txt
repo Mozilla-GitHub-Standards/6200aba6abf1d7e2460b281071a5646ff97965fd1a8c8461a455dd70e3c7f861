@@ -13,6 +13,7 @@ Routes == 1.13
 SQLAlchemy == 0.7.9
 PyMySQL == 0.5
 pymysql_sa == 1.0
+pylibmc == 1.2.3
 WSGIProxy == 0.2.2
 recaptcha-client == 1.0.6
 metlog-py == 0.9.8

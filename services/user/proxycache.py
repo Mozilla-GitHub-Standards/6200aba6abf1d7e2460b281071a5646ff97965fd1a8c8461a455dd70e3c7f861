@@ -37,15 +37,15 @@
 
 This authentication class provides a local cache proxy of the auth data
 from anothe system.  It talks to the server-whoami API to authenticate and
-retrieve user account details, and caches them in a local SQL database for
+retrieve user account details, and caches successful credentials in memcached
 to speed up future requests.
 
 We plan to use it for a quick deployment of some server-storage nodes into
 AWS.  It probably shouldn't be used in other scenarios without careful
 consideration of the tradeoffs.
 
-The use of a local SQL database as a cache has some subtle implications,
-which are fine for this deployment but deserve to be called out explicitly:
+The use of a local cache has some subtle implications, which are fine for
+this deployment but deserve to be called out explicitly:
 
     * Password changes will not be picked up straight away.  If the user
       changes their password through account-portal but leaves it unchanged
@@ -61,37 +61,38 @@ which are fine for this deployment but deserve to be called out explicitly:
 
     * Similarly, node re-assignments will not be picked up straight away.
       You'll have to wait for the cache timeout to expire before the node
-      starts giving 401s to unassigned users.  Or just blow up the node
-      every time you re-assigned away from it, which will clean up the cache
-      as a side-effect...
+      starts giving 401s to unassigned users.
 
 """
 
+import os
 import time
 import json
+import hmac
+import Queue
+import hashlib
+import contextlib
 
-from services.http_helpers import get_url
+from services.user import _password_to_credentials
+from services.user.proxy import ProxyUser
 from services.exceptions import BackendError
 
-from services.user.sql import SQLUser, _password_to_credentials
-
 from metlog.holder import CLIENT_HOLDER
+from metlog.decorators.stats import timeit as metlog_timeit
 
+import pylibmc
 
-# This is a field in the SQLUser auth database, that we're going to
-# hijack to store the last-checked timestamp for user passwords.
-# Inelegant, but means we can re-use the SQLUser code unchanged.
-CACHE_TIMESTAMP_FIELD = "accountStatus"
 
 METLOG_PREFIX = "services.user.proxycache"
 
+
 class ProxyCacheUser(object):
-    """Caching Proxy User backend, that keeps an SQL cache of main user db.
+    """Caching Proxy User backend, using memcache in front of the main user db.
 
     This is a special-purpose User backend for doing authentication in some
-    external infrastructure, such as AWS.  It re-purposes the SQL storage
-    backend to act as a local cache of the remote, authoritative auth data,
-    which it populates on-demand by hitting the special server-whoami web API.
+    external infrastructure, such as AWS.  It uses memcache to keep a local
+    local cache of the remote, authoritative auth data, which is populates
+    on-demand by hitting the special server-whoami web API.
 
     Some implementation notes:
 
@@ -99,98 +100,133 @@ class ProxyCacheUser(object):
           the only one used by server-storage.  All other methods will raise
           an error if you try to use them.
 
-        * We check for account existence, verify passwords, and grab account
-          details by making a single request to the server-whoami web API,
-          passing the account credentials provided by the user.
+        * Successfully-authed credentials are hmac-ed into an opaque 'token'
+          and written to memcached to speed up future requests.  The token
+          is a hmac of the username, password, and a "counter" based on the
+          on the current timestamp.  The counter is used to provide a little
+          bit of perturbation into what's otherwise a deterministic hash.
 
-        * The accountStatus db column is repurposed here to store an integer
-          timestamp for the last cache refresh.  This allows us to expire
-          the cache without fiddling with the underlying SQL queries etc.
-          Ugly, but minimally invasive.
+        * Cracking passwords from this cached data would thus involve:
+              * being able to read the cached keys out of memcached
+              * knowing the secret server-side hmac key
+              * knowing roughly the time at which the keys were written
+              * brute-forcing HMAC-SHA256
 
-        * Passwords are hashed using a single iteration of sha256; this
-          is very bad and should be fixed in the SQLUser backend.
 
     """
 
-    def __init__(self, whoami_uri, cache_timeout=60*60, **kw):
-        self.whoami_uri = whoami_uri.rstrip("/")
+    def __init__(self, whoami_uri, secret_key=None, cache_servers=None,
+                 cache_prefix="ProxyCacheUser/", cache_timeout=60*60, **kw):
+        self.proxy = ProxyUser(whoami_uri)
+        # Use a randomly-generated secret key if none is specified.
+        # This is secure, but will reduce the re-usability of the cache.
+        if secret_key is None:
+            secret_key = os.urandom(32)
+        self.hmac_master = hmac.new(secret_key, "", hashlib.sha256)
+        # Default to memcached running on localhost if no server specified.
+        if isinstance(cache_servers, str):
+            cache_servers = [cache_servers]
+        elif cache_servers is None:
+            cache_servers = ['127.0.0.1:11211']
+        self.cache_prefix = cache_prefix
         self.cache_timeout = int(cache_timeout)
-        # We use the accountStatus field as a timestamp to track cache
-        # freshness, so make sure we don't use it for account state checking.
-        kw["check_account_state"] = False
-        self._cache = SQLUser(**kw)
+        self.cache_client = pylibmc.Client(cache_servers)
+        self.cache_pool = BottomlessClientPool(self.cache_client)
 
     @_password_to_credentials
     def authenticate_user(self, user, credentials, attrs=None):
+        username = user.get("username")
+        if username is None:
+            return None
         password = credentials.get("password")
         if not password:
             return None
 
-        # We always want to load the timestamp field, for freshness checking.
-        if not attrs:
-            attrs = [CACHE_TIMESTAMP_FIELD]
-        else:
-            attrs = list(attrs) + [CACHE_TIMESTAMP_FIELD]
+        # The auth caching token includes a timestamp-derived counter, so
+        # there are several possibile tokens that could be active in the cache.
+        tokens = list(self._generate_possible_tokens(username, password))
 
-        # Look locally first.  With luck, the full account exists in the cache
-        # and the cached password is up-to-date.
-        now = int(time.time())
-        userid = self._cache.authenticate_user(user, password, attrs)
-        if userid is not None:
-            expiry_time = user[CACHE_TIMESTAMP_FIELD] + self.cache_timeout
-            if expiry_time > now:
+        # Look for all of those tokens in the cache with a single get.
+        # If any one of them exists, the auth is OK.
+        cached_user_data = self._cache_get(*tokens)
+        if cached_user_data is not None:
+            user.update(cached_user_data)
+            # Check that we got all the requested attributes.
+            # If not, we'll have to fall back to the proxy API to fetch them.
+            for attr in attrs:
+                if attr not in user:
+                    break
+            else:
                 CLIENT_HOLDER.default_client.incr(METLOG_PREFIX + "cache_hit")
-                return userid
+                return user["userid"]
 
-        # This might have failed due to missing account, missing or expired
-        # password cache, or an actual bad password.  All cases get treated
-        # like a cache miss.  We make an authenticated request to the whoami
-        # API, and write the returned data into the local cache.
-        username = user.get("username")
-        if username is None:
+        # Not cached, call through to the proxy.
+        userid = self.proxy.authenticate_user(user, credentials, attrs)
+        if userid is None:
             return None
-        code, headers, body = get_url(self.whoami_uri, "GET",
-                                      user=username, password=password)
-        if code == 401:
-            return None
-        if code != 200:
-            logger = CLIENT_HOLDER.default_client
-            logger.error("whoami API unexpected behaviour")
-            logger.error("  code: %r", code)
-            logger.error("  headers: %r", headers)
-            logger.error("  body: %r", body)
-            raise BackendError("whoami API unexpected behaviour")
-
-        # Now we know the account is good, write it into the cache db.
-        try:
-            user_data = json.loads(body)
-        except ValueError:
-            logger = CLIENT_HOLDER.default_client
-            logger.error("whoami API produced invalid JSON")
-            logger.error("  code: %r", code)
-            logger.error("  headers: %r", headers)
-            logger.error("  body: %r", body)
-            raise BackendError("whoami API produced invalid JSON")
-
-        self._cache.delete_user(user)
-
-        new_user_data = {
-            "userid": user_data["userid"],
-            "username": username,
-            "password": password,
-            "email": user_data.get("mail", ""),
-            CACHE_TIMESTAMP_FIELD: now,
-            "syncNode": user_data.get("syncNode", ""),
-        }
-
-        # This could fail if there's a race for a particular user,
-        # but it'll just return False rather than raising an exception.
-        self._cache.create_user(**new_user_data)
-
         CLIENT_HOLDER.default_client.incr(METLOG_PREFIX + "cache_miss")
-        user.update(new_user_data)
-        return user["userid"]
+
+        # Now we know the account is good, write it into the cache
+        # using the most recent token as key.
+        cached_user_data = {"userid": userid}
+        if attrs:
+            for attr in attrs:
+                cached_user_data[attr] = user[attr]
+        self._cache_set(tokens[0], cached_user_data)
+
+        return userid
+
+    def _generate_possible_tokens(self, username, password):
+        """Generate possible auth-caching tokens for these credentials.
+
+        The token is a HMAC of the username, the password, and a "counter"
+        derived from the current timestamp.  The counter is used to add a
+        little bit of perturbation into what's otherwise a deterministic
+        hash.  It is the number of cache_timeout intervals that have elapsed
+        since the unix epoch, i.e. counter = floor(cur_time / cache_timeout).
+
+        We allow both the current counter value and the previous one when
+        when checking for valid cached credentials.  The TTLs in memcache
+        will ensure that we're not using old data once it has expired.
+        """
+        template = "%s:%s:%d"
+        counter = int(time.time() / self.cache_timeout)
+        hasher = self.hmac_master.copy()
+        hasher.update(template % (username, password, counter))
+        yield hasher.digest().encode('base64').strip()
+        counter = counter - 1
+        hasher = self.hmac_master.copy()
+        hasher.update(template % (username, password, counter))
+        yield hasher.digest().encode('base64').strip()
+
+    @metlog_timeit
+    def _cache_get(self, *keys):
+        """Get an item from the cache.
+
+        If multiple arguments are given, attempt to load all those keys and
+        return data from the first one successfully found.
+        """
+        keys = [self.cache_prefix + key for key in keys]
+        with self.cache_pool.reserve() as mc:
+            try:
+                values = mc.get_multi(keys)
+            except pylibmc.Error, err:
+                raise BackendError(str(err))
+            for key in keys:
+                if key in values:
+                    return json.loads(values[key])
+            return None
+
+    @metlog_timeit
+    def _cache_set(self, key, value):
+        """Set an item in the cache.  It gets a default ttl."""
+        key = self.cache_prefix + key
+        with self.cache_pool.reserve() as mc:
+            try:
+                if not mc.set(key, json.dumps(value), self.cache_timeout):
+                    raise BackendError('memcached error')
+            except pylibmc.Error, err:
+                raise BackendError(str(err))
 
     # All other methods are disabled on the proxy.
     # Only authenticate_user() is allowed.
@@ -218,3 +254,30 @@ class ProxyCacheUser(object):
 
     def delete_user(self, user, credentials=None):
         raise BackendError("Disabled in ProxyCacheUser")
+
+
+class BottomlessClientPool(pylibmc.ClientPool):
+    """Memcached client pool that can gros as big as needed.
+
+    This is a customized pylibmc.ClientPool that will never block waiting
+    for a connection.  Instead, it will just create a new one on demand.
+    This seems superior to using ThreadMappedPool for our use case, since
+    we will never ask for more connections than there are active threads,
+    we may wind up with less total connections, and we don't have to worry
+    about cleaning up internal state when a thread exits.
+    """
+
+    def __init__(self, mc=None, n_slots=0):
+        self._mc = mc
+        pylibmc.ClientPool.__init__(self, mc, n_slots)
+
+    @contextlib.contextmanager
+    def reserve(self):
+        try:
+            mc = self.get(False)
+        except Queue.Empty:
+            mc = self._mc.clone()
+        try:
+            yield mc
+        finally:
+            self.put(mc)
