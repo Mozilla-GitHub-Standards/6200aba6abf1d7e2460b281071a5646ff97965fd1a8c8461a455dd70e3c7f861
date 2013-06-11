@@ -4,8 +4,8 @@
 
 create table if not exists user (
 userid int not null primary key,
-username varbinary(32) not null unique key,
-password varbinary(128),
+username varchar(32) not null unique key,
+password varchar(128),
 accountStatus int default 1,
 mail varchar(64),
 mailVerified int default 0,

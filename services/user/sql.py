@@ -45,6 +45,7 @@ from sqlalchemy import Integer, String
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy.sql import bindparam, select, insert, update, delete
+from sqlalchemy.sql import text as sqltext
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 
@@ -63,9 +64,9 @@ class Users(_Base):
     userid = Column(Integer, primary_key=True, nullable=False)
     username = Column(String(32), unique=True, nullable=False)
     password = Column(String(128))
-    accountStatus = Column(Integer, default=1)
+    accountStatus = Column(Integer, default=1, server_default=sqltext('1'))
     mail = Column(String(64))
-    mailVerified = Column(Integer, default=0)
+    mailVerified = Column(Integer, default=0, server_default=sqltext('0'))
     syncNode = Column(String(64))
 
 users = Users.__table__
