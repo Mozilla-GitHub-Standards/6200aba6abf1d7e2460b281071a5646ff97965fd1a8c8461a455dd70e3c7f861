@@ -39,7 +39,7 @@
 import urlparse
 import json
 
-from metlog.holder import CLIENT_HOLDER
+from heka.holder import CLIENT_HOLDER
 from services.exceptions import BackendError
 from services.http_helpers import get_url
 from services.auth import NoEmailError

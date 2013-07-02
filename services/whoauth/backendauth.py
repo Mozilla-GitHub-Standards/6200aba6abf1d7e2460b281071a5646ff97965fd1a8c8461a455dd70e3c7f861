@@ -46,8 +46,8 @@ except:
     implements = lambda x: None  # NOQA
     IAuthenticator = None        # NOQA
 
-from metlog.holder import CLIENT_HOLDER
-from metlog_cef import AUTH_FAILURE
+from heka.holder import CLIENT_HOLDER
+from heka_cef import AUTH_FAILURE
 
 from services.user import User, extract_username
 

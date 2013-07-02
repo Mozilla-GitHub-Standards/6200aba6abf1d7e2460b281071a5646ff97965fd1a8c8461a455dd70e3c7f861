@@ -33,7 +33,7 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-from metlog.holder import CLIENT_HOLDER
+from heka.holder import CLIENT_HOLDER
 from services.util import BackendError
 try:
     from recaptcha.client import captcha

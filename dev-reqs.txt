@@ -13,11 +13,10 @@ Routes
 SQLAlchemy <= 0.7.999
 PyMySQL
 pymysql_sa
-pylibmc
 WSGIProxy
 recaptcha-client
-metlog-py >= 0.9.5
-metlog-cef
+heka-py >= 0.20
+heka-py-cef
 repoze.lru
 repoze.who
 scrypt

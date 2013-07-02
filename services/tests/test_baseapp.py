@@ -84,7 +84,7 @@ class Mod2(object):
 
 
 heredir = os.path.dirname(__file__)
-metlog_cfg_path = os.path.join(heredir, 'metlog_test.ini')
+heka_cfg_path = os.path.join(heredir, 'heka_test.ini')
 
 
 class TestBaseApp(unittest.TestCase):
@@ -100,7 +100,7 @@ class TestBaseApp(unittest.TestCase):
     config = {'host:here.one.two': 1,
               'one.two': 2,
               'auth.backend': 'services.auth.dummy.DummyAuth',
-              'app.modules': ['mod1', 'mod2', 'metlog_loader'],
+              'app.modules': ['mod1', 'mod2', 'heka_loader'],
               'mod1.backend': 'services.tests.test_baseapp.Mod1',
               'mod2.backend': 'services.tests.test_baseapp.Mod2',
               'cef.use': 'true',
@@ -109,8 +109,8 @@ class TestBaseApp(unittest.TestCase):
               'cef.version': '0',
               'cef.device_version': '1.3',
               'cef.product': 'weave',
-              'metlog_loader.backend': 'services.metrics.MetlogLoader',
-              'metlog_loader.config': metlog_cfg_path,
+              'heka_loader.backend': 'services.metrics.HekaLoader',
+              'heka_loader.config': heka_cfg_path,
               }
     auth_class = None
 
@@ -137,9 +137,9 @@ class TestBaseApp(unittest.TestCase):
     def test_retry_after(self):
         config = {'global.retry_after': 60,
                   'auth.backend': 'services.auth.dummy.DummyAuth',
-                  'app.modules': ['metlog_loader'],
-                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
-                  'metlog_loader.config': metlog_cfg_path,
+                  'app.modules': ['heka_loader'],
+                  'heka_loader.backend': 'services.metrics.HekaLoader',
+                  'heka_loader.config': heka_cfg_path,
                   }
         urls = [('GET', '/boom', 'foo', 'boom'),
                 ('GET', '/boom2', 'foo', 'boom2'),
@@ -194,9 +194,9 @@ class TestBaseApp(unittest.TestCase):
 
         config = {'global.heartbeat_page': '__heartbeat__',
                   'global.debug_page': '__debug__',
-                  'app.modules': ['metlog_loader'],
-                  'metlog_loader.backend': 'services.metrics.MetlogLoader',
-                  'metlog_loader.config': metlog_cfg_path,
+                  'app.modules': ['heka_loader'],
+                  'heka_loader.backend': 'services.metrics.HekaLoader',
+                  'heka_loader.config': heka_cfg_path,
                   'auth.backend': 'services.auth.dummy.DummyAuth'}
         urls = []
         controllers = {}

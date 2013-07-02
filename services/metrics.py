@@ -35,36 +35,36 @@
 #
 # ***** END LICENSE BLOCK *****
 """
-server-core plugin to set up metlog.
+server-core plugin to set up heka.
 """
 from contextlib import contextmanager
-from metlog.config import client_from_stream_config
-from metlog.decorators.base import MetlogDecorator
-from metlog.decorators.stats import timeit
-from metlog.holder import CLIENT_HOLDER
+from heka.config import client_from_stream_config
+from heka.decorators.base import HekaDecorator
+from heka.decorators.stats import timeit
+from heka.holder import CLIENT_HOLDER
 import threading
 
 
 _LOCAL_STORAGE = threading.local()
 
 
-def MetlogLoader(**kwargs):
-    # Delegates to metlog-py's client configuration functions
+def HekaLoader(**kwargs):
+    # Delegates to heka-py's client configuration functions
     cfgfilepath = kwargs['config']
     with open(cfgfilepath) as cfgfile:
-        metlog = client_from_stream_config(cfgfile, 'metlog')
-        CLIENT_HOLDER.set_client(metlog.logger, metlog)
+        heka = client_from_stream_config(cfgfile, 'heka')
+        CLIENT_HOLDER.set_client(heka.logger, heka)
     return CLIENT_HOLDER
 
 
-def update_metlog_data(update_data):
+def update_heka_data(update_data):
     """
-    Update the 'metlog_data' dictionary for this request w/ the provided data.
+    Update the 'heka_data' dictionary for this request w/ the provided data.
     """
-    if not hasattr(_LOCAL_STORAGE, 'metlog_data'):
-        raise AttributeError("No `metlog_data`; are you in a "
+    if not hasattr(_LOCAL_STORAGE, 'heka_data'):
+        raise AttributeError("No `heka_data`; are you in a "
                              "thread_context?")
-    _LOCAL_STORAGE.metlog_data.update(update_data)
+    _LOCAL_STORAGE.heka_data.update(update_data)
 
 
 @contextmanager
@@ -75,29 +75,29 @@ def thread_context(callback):
     called and passed that dictionary as the sole argument, after which the
     dictionary will be deleted.
     """
-    _LOCAL_STORAGE.metlog_data = dict()
-    yield _LOCAL_STORAGE.metlog_data
+    _LOCAL_STORAGE.heka_data = dict()
+    yield _LOCAL_STORAGE.heka_data
     try:
-        if _LOCAL_STORAGE.metlog_data:
-            callback(_LOCAL_STORAGE.metlog_data)
+        if _LOCAL_STORAGE.heka_data:
+            callback(_LOCAL_STORAGE.heka_data)
     finally:
-        del _LOCAL_STORAGE.metlog_data
+        del _LOCAL_STORAGE.heka_data
 
 
-class send_services_data(MetlogDecorator):
+class send_services_data(HekaDecorator):
     """
-    Decorator that wraps a function with a threadlocal metlog data dictionary.
+    Decorator that wraps a function with a threadlocal heka data dictionary.
     Anything written into this dictionary from within the decorated code will
-    be sent as a 'services' message through metlog when the function returns.
+    be sent as a 'services' message through heka when the function returns.
     """
-    def metlog_call(self, *args, **kwargs):
+    def heka_call(self, *args, **kwargs):
         req = args[0]
 
-        def send_logmsg(metlog_data):
-            self.client.metlog('services', fields=metlog_data)
+        def send_logmsg(heka_data):
+            self.client.heka('services', fields=heka_data)
 
-        with thread_context(send_logmsg) as metlog_data:
-            metlog_data['userid'] = req.user['userid']
+        with thread_context(send_logmsg) as heka_data:
+            heka_data['userid'] = req.user['userid']
             return self._fn(*args, **kwargs)
 
 
@@ -105,12 +105,12 @@ class svc_timeit(timeit):
     """
     Record timer value in services data.
     """
-    def metlog_call(self, *args, **kwargs):
+    def heka_call(self, *args, **kwargs):
         if self.args is None:
             self.args = tuple()
         if self.kwargs is None:
             self.kwargs = {'name': self._fn_fq_name}
         with self.client.timer(*self.args, **self.kwargs) as timer:
             result = self._fn(*args, **kwargs)
-        update_metlog_data({'req_time': timer.result})
+        update_heka_data({'req_time': timer.result})
         return result

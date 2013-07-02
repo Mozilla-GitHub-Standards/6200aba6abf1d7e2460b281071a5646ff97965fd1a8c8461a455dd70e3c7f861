@@ -45,7 +45,7 @@ from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.sql import bindparam, select, insert, update, delete
 from sqlalchemy.pool import NullPool
 
-from metlog.holder import CLIENT_HOLDER
+from heka.holder import CLIENT_HOLDER
 from services.util import validate_password, ssha256, safe_execute
 from services.auth.resetcode import ResetCodeManager
 from services.resetcodes import ResetCode

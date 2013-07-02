@@ -45,7 +45,7 @@ from sqlalchemy.ext.declarative import declarative_base, Column
 from sqlalchemy import String, DateTime
 from sqlalchemy.sql import bindparam, select, insert, delete
 
-from metlog.holder import CLIENT_HOLDER
+from heka.holder import CLIENT_HOLDER
 from services.util import safe_execute
 from services.resetcodes import ResetCode
 

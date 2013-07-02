@@ -43,12 +43,12 @@ import sys
 import signal
 from time import sleep
 
-from metlog.client import MetlogClient
-from metlog.decorators.stats import incr_count
-from metlog.holder import CLIENT_HOLDER
-from metlog.senders.logging import StdLibLoggingSender
+# from heka.client import HekaClient
+from heka.decorators.stats import incr_count
+# from heka.holder import CLIENT_HOLDER
+# from heka.senders.logging import StdLibLoggingSender
 
-import metlog_cef.cef_plugin
+import heka_cef.cef_plugin
 
 from paste.translogger import TransLogger
 from paste.exceptions.errormiddleware import ErrorMiddleware
@@ -105,17 +105,17 @@ class SyncServerApp(object):
         for module in app_modules:
             self.modules[module] = load_and_configure(self.config, module)
 
-        if self.modules.get('metlog_loader') is not None:
-            # stash the metlog client in a more convenient spot
-            self.logger = self.modules.get('metlog_loader').default_client
-        else:
-            # there was no metlog config, default to using StdLibLoggingSender
-            sender = StdLibLoggingSender('syncserver', json_types=[])
-            metlog = MetlogClient(sender, 'syncserver')
-            CLIENT_HOLDER.set_client(metlog.logger, metlog)
-            self.logger = metlog
+        if self.modules.get('heka_loader') is not None:
+            # stash the heka client in a more convenient spot
+            self.logger = self.modules.get('heka_loader').default_client
+        # else:
+        #     # there was no heka config, default to using StdLibLoggingSender
+        #     sender = StdLibLoggingSender('syncserver', json_types=[])
+        #     heka = HekaClient(sender, 'syncserver')
+        #     CLIENT_HOLDER.set_client(heka.logger, heka)
+        #     self.logger = heka
         if not hasattr(self.logger, "cef"):
-            log_cef_fn = metlog_cef.cef_plugin.config_plugin(dict())
+            log_cef_fn = heka_cef.cef_plugin.config_plugin(dict())
             self.logger.add_method(log_cef_fn)
 
         # XXX: this should be converted to auto-load in self.modules
@@ -140,7 +140,7 @@ class SyncServerApp(object):
             if isinstance(verbs, str):
                 verbs = [verbs]
 
-            # wrap action methods w/ metlog decorators
+            # wrap action methods w/ heka decorators
             controller_instance = self.controllers.get(controller)
             if controller_instance is not None:
                 wrapped_name = '_%s_wrapped' % action

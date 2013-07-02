@@ -43,11 +43,11 @@ from ConfigParser import RawConfigParser
 
 from webob import Request
 
-from metlog.holder import CLIENT_HOLDER
-from metlog.senders.dev import DebugCaptureSender
-from metlog.client import MetlogClient
+from heka.holder import CLIENT_HOLDER
+from heka.streams.dev import DebugCaptureStream
+from heka.client import HekaClient
 
-import metlog_cef.cef_plugin
+import heka_cef.cef_plugin
 
 from services.config import Config
 from services.pluginreg import load_and_configure
@@ -111,17 +111,17 @@ class TestEnv(object):
         # loading loggers
         self.config = self.convert_config(ini_cfg, ini_path)
 
-        # Ensure that metlog is available, either from the config
+        # Ensure that heka is available, either from the config
         # or by setting up a default client.
         try:
-            loader = load_and_configure(self.config, "metlog_loader")
+            loader = load_and_configure(self.config, "heka_loader")
             client = loader.default_client
         except KeyError:
-            sender = DebugCaptureSender()
-            client = MetlogClient(sender, "syncserver")
+            sender = DebugCaptureStream()
+            client = HekaClient(sender, "syncserver")
         CLIENT_HOLDER.set_client(client.logger, client)
         if not hasattr(client, "cef"):
-            log_cef_fn = metlog_cef.cef_plugin.config_plugin(dict())
+            log_cef_fn = heka_cef.cef_plugin.config_plugin(dict())
             client.add_method(log_cef_fn)
 
         if load_sections is not None:

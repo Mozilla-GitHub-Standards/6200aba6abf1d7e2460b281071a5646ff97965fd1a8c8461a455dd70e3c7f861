@@ -41,8 +41,8 @@ import base64
 
 from webob.exc import HTTPUnauthorized, HTTPBadRequest, HTTPServerError
 
-from metlog.holder import CLIENT_HOLDER
-from metlog_cef import AUTH_FAILURE
+from heka.holder import CLIENT_HOLDER
+from heka_cef import AUTH_FAILURE
 
 from services.pluginreg import load_and_configure
 from services.user import User, extract_username

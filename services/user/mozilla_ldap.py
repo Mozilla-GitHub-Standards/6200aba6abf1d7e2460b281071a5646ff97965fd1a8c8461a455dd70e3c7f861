@@ -41,7 +41,7 @@ import random
 
 import ldap
 
-from metlog.holder import CLIENT_HOLDER
+from heka.holder import CLIENT_HOLDER
 from services.user import User, _password_to_credentials
 from services.util import BackendError, ssha
 from services.ldappool import ConnectionManager

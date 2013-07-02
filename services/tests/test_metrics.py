@@ -39,16 +39,16 @@ from services.metrics import MetlogLoader
 
 
 heredir = os.path.dirname(__file__)
-metlog_cfg_path = os.path.join(heredir, 'metlog_test.ini')
+heka_cfg_path = os.path.join(heredir, 'heka_test.ini')
 
 helper_config = {
-    'config': metlog_cfg_path,
+    'config': heka_cfg_path,
 }
 
 
-class TestMetlogPlugin(unittest.TestCase):
+class TestHekaPlugin(unittest.TestCase):
     def test_creates_client(self):
-        holder = MetlogLoader(**helper_config)
+        holder = HekaLoader(**helper_config)
         self.assertFalse(holder.default_client is None)
         sender = holder.default_client.sender
         self.assertEqual(sender.__class__.__name__, 'DebugCaptureSender')
