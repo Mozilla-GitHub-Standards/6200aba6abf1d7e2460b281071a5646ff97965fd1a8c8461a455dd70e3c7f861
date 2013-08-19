@@ -149,8 +149,26 @@ class WhoAuthentication(object):
         if identity is None:
             self._raise_challenge(request)
 
-        # Check against the username matched from the url, if any.
+        # The identity must somehow get "userid" and "username" keys.
+        # If they haven't been set by the plugins, try to synthesize them
+        # from other available information.
+        userid = None
+        for key in ("userid", "uid", "repoze.who.userid"):
+            userid = identity.get(key)
+            if userid is not None and isinstance(userid, int):
+                break
+        else:
+            msg = 'Authentication plugins did not establish a userid'
+            raise HTTPServerError(msg)
         username = identity.get("username")
+        if username is None:
+            username = identity.get("repoze.who.userid")
+            if username is None:
+                msg = 'Authentication plugins did not establish a username'
+                raise HTTPServerError(msg)
+            username = str(username)
+
+        # Check against the username matched from the url, if any.
         if match.get("username") not in (None, username):
             cef_kwds = {"signature": AUTH_FAILURE}
             if username is not None:
@@ -163,10 +181,10 @@ class WhoAuthentication(object):
         # The identity must somehow get "userid" and "username" keys,
         # either from the authenticator or from an mdprovider.
         request.environ.pop("HTTP_AUTHORIZATION", None)
-        match["user_id"] = identity["userid"]
-        request.remote_user = identity["username"]
-        request.environ["REMOTE_USER"] = identity["username"]
-        request.user = User(identity["username"], identity["userid"])
+        match["user_id"] = userid
+        request.remote_user = username
+        request.environ["REMOTE_USER"] = username
+        request.user = User(username, userid)
         request.user.update(identity)
 
     def acknowledge(self, request, response):
